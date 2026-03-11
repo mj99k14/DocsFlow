@@ -1,0 +1,105 @@
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional, List
+from models import StatusType, ActionType
+
+
+# ── 1. Document (문서) ───────────────────────────────────────
+
+# 문서 업로드 응답
+class DocumentResponse(BaseModel):
+    id        : int
+    file_name : str
+    status    : StatusType
+    created_at: datetime
+
+    class Config:
+        from_attributes = True  # SQLAlchemy 모델 → Pydantic 변환 허용
+
+
+# 문서 상태 조회 응답
+class DocumentStatusResponse(BaseModel):
+    id        : int
+    file_name : str
+    status    : StatusType
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── 2. AnalysisResult (AI 분석 결과) ────────────────────────
+
+# 분석 결과 응답
+class AnalysisResultResponse(BaseModel):
+    id           : int
+    document_id  : int
+    document_type: Optional[str] = None   # 문서 유형
+    summary      : Optional[str] = None   # 문서 요약
+    keywords     : Optional[list] = None  # 키워드 배열
+    reasoning    : Optional[str] = None   # AI 판단 근거
+    created_at   : datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── 3. Department (부서) ─────────────────────────────────────
+
+# 부서 응답
+class DepartmentResponse(BaseModel):
+    id           : int
+    name         : str
+    slack_channel: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ── 4. DocumentDepartment (AI 추천 부서) ─────────────────────
+
+# AI 추천 부서 응답
+class DocumentDepartmentResponse(BaseModel):
+    id           : int
+    analysis_id  : int
+    department_id: int
+    confidence   : Optional[float] = None   # AI 신뢰도
+    is_selected  : bool
+
+    class Config:
+        from_attributes = True
+
+
+# ── 5. ApprovalHistory (승인 이력) ───────────────────────────
+
+# 승인 요청 (Slack에서 버튼 클릭 시)
+class ApprovalRequest(BaseModel):
+    document_id: int
+    action     : ActionType   # APPROVED / REJECTED
+    approved_by: str          # Slack 유저명
+
+
+# 승인 응답
+class ApprovalResponse(BaseModel):
+    id         : int
+    document_id: int
+    action     : ActionType
+    approved_by: str
+    created_at : datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── 6. 전체 문서 상세 조회 (문서 + 분석결과 + 추천부서) ──────
+
+class DocumentDetailResponse(BaseModel):
+    id         : int
+    file_name  : str
+    status     : StatusType
+    created_at : datetime
+    analysis   : Optional[AnalysisResultResponse] = None  # 분석 결과
+    departments: Optional[List[DocumentDepartmentResponse]] = None  # 추천 부서
+
+    class Config:
+        from_attributes = True
