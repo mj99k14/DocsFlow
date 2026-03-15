@@ -39,6 +39,7 @@ class AnalysisResultResponse(BaseModel):
     keywords     : Optional[list] = None  # 키워드 배열
     reasoning    : Optional[str] = None   # AI 판단 근거
     created_at   : datetime
+    departments  : Optional[List["DocumentDepartmentResponse"]] = None  # 추천 부서
 
     class Config:
         from_attributes = True
@@ -98,8 +99,7 @@ class DocumentDetailResponse(BaseModel):
     file_name  : str
     status     : StatusType
     created_at : datetime
-    analysis   : Optional[AnalysisResultResponse] = None  # 분석 결과
-    departments: Optional[List[DocumentDepartmentResponse]] = None  # 추천 부서
+    analysis   : Optional[AnalysisResultResponse] = None  # 분석 결과 (departments 포함)
 
     class Config:
         from_attributes = True

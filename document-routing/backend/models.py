@@ -30,7 +30,7 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.utcnow)  # 업로드 시간
 
     # 관계
-    analysis = relationship("AnalysisResult", back_populates="document")
+    analysis = relationship("AnalysisResult", back_populates="document", uselist=False)
     approvals = relationship("ApprovalHistory", back_populates="document")
 
 
