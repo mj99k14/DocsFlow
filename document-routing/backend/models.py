@@ -12,11 +12,13 @@ class StatusType(str, enum.Enum):
     ANALYZING  = "ANALYZING"    # AI 분석 중
     COMPLETED  = "COMPLETED"    # 분석 완료
     FAILED     = "FAILED"       # 분석 실패
+    HELD = "HELD" #반려
 
 
 class ActionType(str, enum.Enum):
     APPROVED = "APPROVED"   # 승인
     REJECTED = "REJECTED"   # 반려
+    HELD = "HELD" #반려
 
 
 # ── 1. documents (문서) ─────────────────────────────────────
