@@ -6,6 +6,7 @@ from models import Document, AnalysisResult, DocumentDepartment, Department, Sta
 from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse
 from services.pdf import extract_text_from_pdf
 from services.ai import analyze_document
+from services.slack import send_slack_notification
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -20,7 +21,7 @@ def process_document(document_id: int, file_path: str, db: Session):
         document = db.query(Document).filter(Document.id == document_id).first()
         document.status = StatusType.ANALYZING
         db.commit()
-
+        
         # 2. PDF 텍스트 추출
         text = extract_text_from_pdf(file_path)
 
@@ -57,9 +58,13 @@ def process_document(document_id: int, file_path: str, db: Session):
             db.add(doc_dept)
             db.commit()
 
+
         # 6. 상태 → COMPLETED
         document.status = StatusType.COMPLETED
         db.commit()
+
+        #7. Slack 알림 전송
+        send_slack_notification(document_id,document.file_name,ai_result)
 
         print(f" 문서 {document_id} 분석 완료: {department_name} ({confidence})")
 
@@ -123,3 +128,4 @@ def get_document_detail(document_id: int, db: Session = Depends(get_db)):
     if not document:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
     return document
+
