@@ -124,7 +124,7 @@ def send_slack_notification(document_id:int, file_name:str, ai_result:dict):
 
     #부서 URL 없으면 기본 채널로
     if not webhook_url:
-        webhook_url = WEBHOOK_URLS.get("경영기획팀")
+        webhook_url = WEBHOOK_URLS.get("반려")
     
     if not webhook_url:
         raise Exception("Slack Webhook URL이 설정되지 않습니다")
