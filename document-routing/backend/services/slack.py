@@ -4,37 +4,32 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-#부서별 wehook URL
+# 부서별 Webhook URL
 WEBHOOK_URLS = {
-    "법무팀": os.getenv("SLACK_WEBHOOK_LEGAL"),
-    "재무팀": os.getenv("SLACK_WEBHOOK_FINANCE"),
-    "인사팀": os.getenv("SLACK_WEBHOOK_HR"),
-    "경영기획팀":os.getenv("SLACK_WEBHOOK_PLANNING"),
+    "법무팀":    os.getenv("SLACK_WEBHOOK_LEGAL"),
+    "재무팀":    os.getenv("SLACK_WEBHOOK_FINANCE"),
+    "인사팀":    os.getenv("SLACK_WEBHOOK_HR"),
+    "경영기획팀": os.getenv("SLACK_WEBHOOK_PLANNING"),
 }
 
+# 관리자 채널 Webhook URL
+WEBHOOK_ADMIN = os.getenv("SLACK_WEBHOOK_ADMIN")
 
-def send_slack_notification(document_id:int, file_name:str, ai_result:dict):
+
+def send_slack_notification(document_id: int, file_name: str, ai_result: dict):
     """
     AI 분석 결과를 Slack으로 전송
     승인 / 반려 / 보류 버튼 포함
- 
-    Args:
-        document_id: 문서 ID
-        file_name:   파일 이름
-        ai_result:   Claude AI 분석 결과 딕셔너리
     """
-    department   = ai_result.get("department", "경영기획팀")
-    doc_type     = ai_result.get("document_type", "기타")
-    summary      = ai_result.get("summary", "요약 없음")
-    confidence   = ai_result.get("confidence", 0.0)
-    reasoning    = ai_result.get("reasoning", "")
-    keywords     = ai_result.get("keywords", [])
- 
-    #키워드 문자열 반환
-    keywords_str =", ".join(keywords) if keywords else "없음"
+    department = ai_result.get("department", "경영기획팀")
+    doc_type   = ai_result.get("document_type", "기타")
+    summary    = ai_result.get("summary", "요약 없음")
+    confidence = ai_result.get("confidence", 0.0)
+    reasoning  = ai_result.get("reasoning", "")
+    keywords   = ai_result.get("keywords", [])
 
-    #신뢰도 이미지
+    keywords_str = ", ".join(keywords) if keywords else "없음"
+
     if confidence >= 0.9:
         conf_emoji = "🟢"
     elif confidence >= 0.7:
@@ -42,19 +37,12 @@ def send_slack_notification(document_id:int, file_name:str, ai_result:dict):
     else:
         conf_emoji = "🔴"
 
-    # Slack Block kit 메세지 구성
     message = {
         "blocks": [
-            # 제목
             {
                 "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": f"📄 새 문서가 도착했습니다",
-                    "emoji": True
-                }
+                "text": {"type": "plain_text", "text": "📄 새 문서가 도착했습니다", "emoji": True}
             },
-            # 문서 정보
             {
                 "type": "section",
                 "fields": [
@@ -64,53 +52,39 @@ def send_slack_notification(document_id:int, file_name:str, ai_result:dict):
                     {"type": "mrkdwn", "text": f"*신뢰도*\n{conf_emoji} {int(confidence * 100)}%"},
                 ]
             },
-            # 요약
             {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*📝 문서 요약*\n{summary}"
-                }
+                "text": {"type": "mrkdwn", "text": f"*📝 문서 요약*\n{summary}"}
             },
-            # 키워드
             {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*🔑 키워드*\n{keywords_str}"
-                }
+                "text": {"type": "mrkdwn", "text": f"*🔑 키워드*\n{keywords_str}"}
             },
-            # 판단 근거
             {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*🤖 AI 판단 근거*\n{reasoning}"
-                }
+                "text": {"type": "mrkdwn", "text": f"*🤖 AI 판단 근거*\n{reasoning}"}
             },
-            # 구분선
             {"type": "divider"},
-            # 승인/반려/보류 버튼
             {
                 "type": "actions",
                 "elements": [
                     {
                         "type": "button",
-                        "text": {"type": "plain_text", "text": " 승인", "emoji": True},
+                        "text": {"type": "plain_text", "text": "✅ 승인", "emoji": True},
                         "style": "primary",
                         "value": f"{document_id}",
                         "action_id": "approve_document"
                     },
                     {
                         "type": "button",
-                        "text": {"type": "plain_text", "text": " 반려", "emoji": True},
+                        "text": {"type": "plain_text", "text": "❌ 반려", "emoji": True},
                         "style": "danger",
                         "value": f"{document_id}",
                         "action_id": "reject_document"
                     },
                     {
                         "type": "button",
-                        "text": {"type": "plain_text", "text": " 보류", "emoji": True},
+                        "text": {"type": "plain_text", "text": "⏸ 보류", "emoji": True},
                         "value": f"{document_id}",
                         "action_id": "hold_document"
                     }
@@ -119,20 +93,94 @@ def send_slack_notification(document_id:int, file_name:str, ai_result:dict):
         ]
     }
 
-    #해당 부서 webhook URL 가져오기
     webhook_url = WEBHOOK_URLS.get(department)
+    if not webhook_url:
+        webhook_url = WEBHOOK_URLS.get("경영기획팀")
 
-    #부서 URL 없으면 기본 채널로
     if not webhook_url:
-        webhook_url = WEBHOOK_URLS.get("반려")
-    
-    if not webhook_url:
-        raise Exception("Slack Webhook URL이 설정되지 않습니다")
-    
-    #SLACK으로 전송
+        raise Exception("Slack Webhook URL이 설정되지 않았습니다")
+
     response = requests.post(webhook_url, json=message)
-
     if response.status_code != 200:
         raise Exception(f"Slack 전송 실패: {response.status_code} {response.text}")
-    print(f"Slack 알림 전송 완료 -> {department} ({file_name})")
+
+    print(f" Slack 알림 전송 완료 → {department} ({file_name})")
+    return True
+
+
+def send_rejected_notification(document_id: int, file_name: str, rejected_by: str, original_department: str):
+    """
+    반려 시 관리자 채널로 재분류 요청 알림 전송
+
+    Args:
+        document_id:          문서 ID
+        file_name:            파일 이름
+        rejected_by:          반려한 담당자 Slack 유저명
+        original_department:  원래 AI가 추천했던 부서
+    """
+    if not WEBHOOK_ADMIN:
+        print(" 관리자 Webhook URL이 설정되지 않았습니다")
+        return False
+
+    message = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "⚠️ 문서 재분류가 필요합니다", "emoji": True}
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*파일명*\n{file_name}"},
+                    {"type": "mrkdwn", "text": f"*문서 ID*\n{document_id}"},
+                    {"type": "mrkdwn", "text": f"*AI 추천 부서*\n{original_department}"},
+                    {"type": "mrkdwn", "text": f"*반려한 담당자*\n{rejected_by}"},
+                ]
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*{original_department}* 담당자가 문서를 반려했습니다.\n올바른 부서로 재분류해 주세요."
+                }
+            },
+            {"type": "divider"},
+            # 재분류 버튼
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "⚖️ 법무팀", "emoji": True},
+                        "value": f"{document_id}|법무팀",
+                        "action_id": "reroute_legal"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "💰 재무팀", "emoji": True},
+                        "value": f"{document_id}|재무팀",
+                        "action_id": "reroute_finance"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "👥 인사팀", "emoji": True},
+                        "value": f"{document_id}|인사팀",
+                        "action_id": "reroute_hr"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "📊 경영기획팀", "emoji": True},
+                        "value": f"{document_id}|경영기획팀",
+                        "action_id": "reroute_planning"
+                    },
+                ]
+            }
+        ]
+    }
+
+    response = requests.post(WEBHOOK_ADMIN, json=message)
+    if response.status_code != 200:
+        raise Exception(f"관리자 알림 전송 실패: {response.status_code} {response.text}")
+
+    print(f" 관리자 채널 재분류 요청 전송 완료 ({file_name})")
     return True

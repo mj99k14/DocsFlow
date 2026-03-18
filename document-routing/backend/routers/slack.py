@@ -3,7 +3,8 @@ from fastapi import APIRouter, Request, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Document, ApprovalHistory, StatusType, ActionType
+from models import Document, AnalysisResult, ApprovalHistory, StatusType, ActionType
+from services.slack import send_rejected_notification, send_slack_notification
 
 router = APIRouter(
     prefix="/slack",
@@ -11,7 +12,7 @@ router = APIRouter(
 )
 
 
-#  Slack Callback 처리 
+# ── Slack Callback 처리 ──────────────────────────────────────
 @router.post("/callback")
 async def slack_callback(
     request: Request,
@@ -20,10 +21,8 @@ async def slack_callback(
 ):
     """
     Slack 버튼 클릭 시 호출되는 Callback API
-    승인 / 반려 / 보류 처리
+    승인 / 반려 / 보류 / 재분류 처리
     """
-
-    # Slack은 form-data로 payload 전송
     form_data = await request.form()
     payload_str = form_data.get("payload")
 
@@ -32,17 +31,29 @@ async def slack_callback(
 
     payload = json.loads(payload_str)
 
-    # 액션 정보 추출
     actions = payload.get("actions", [])
     if not actions:
         return JSONResponse(content={"ok": True})
 
-    action = actions[0]
-    action_id    = action.get("action_id")   # approve_document / reject_document / hold_document
-    document_id  = int(action.get("value"))  # 문서 ID
-    user_name    = payload.get("user", {}).get("name", "unknown")  # Slack 유저명
+    action    = actions[0]
+    action_id = action.get("action_id")
+    value     = action.get("value")
+    user_name = payload.get("user", {}).get("name", "unknown")
 
-    # action_id → ActionType 매핑
+    # 재분류 버튼 처리 (reroute_*)
+    if action_id.startswith("reroute_"):
+        document_id, new_department = value.split("|")
+        document_id = int(document_id)
+        background_tasks.add_task(
+            process_reroute,
+            document_id,
+            new_department,
+            user_name,
+            db
+        )
+        return JSONResponse(content={"ok": True})
+
+    # 승인/반려/보류 처리
     action_map = {
         "approve_document": ActionType.APPROVED,
         "reject_document":  ActionType.REJECTED,
@@ -53,7 +64,8 @@ async def slack_callback(
     if not action_type:
         return JSONResponse(content={"error": "알 수 없는 액션"}, status_code=400)
 
-    # 백그라운드에서 DB 업데이트
+    document_id = int(value)
+
     background_tasks.add_task(
         process_approval,
         document_id,
@@ -62,21 +74,13 @@ async def slack_callback(
         db
     )
 
-    # Slack에 3초 안에 응답 (Slack 규칙!)
+    # Slack 3초 규칙
     return JSONResponse(content={"ok": True})
 
 
-def process_approval(
-    document_id: int,
-    action_type: ActionType,
-    user_name: str,
-    db: Session
-):
-    """
-    승인/반려/보류 처리 백그라운드 함수
-    """
+def process_approval(document_id: int, action_type: ActionType, user_name: str, db: Session):
+    """승인/반려/보류 처리"""
     try:
-        # 문서 조회
         document = db.query(Document).filter(Document.id == document_id).first()
         if not document:
             print(f" 문서 {document_id} 없음")
@@ -102,5 +106,78 @@ def process_approval(
 
         print(f" 문서 {document_id} → {action_type.value} ({user_name})")
 
+        # 반려 시 관리자 채널로 재분류 요청
+        if action_type == ActionType.REJECTED:
+            analysis = db.query(AnalysisResult).filter(
+                AnalysisResult.document_id == document_id
+            ).first()
+            original_department = analysis.document_type if analysis else "미확인"
+
+            # 분석결과에서 추천 부서 가져오기
+            from models import DocumentDepartment, Department
+            doc_dept = db.query(DocumentDepartment).join(AnalysisResult).filter(
+                AnalysisResult.document_id == document_id
+            ).first()
+
+            if doc_dept:
+                dept = db.query(Department).filter(
+                    Department.id == doc_dept.department_id
+                ).first()
+                original_department = dept.name if dept else "미확인"
+
+            send_rejected_notification(
+                document_id,
+                document.file_name,
+                user_name,
+                original_department
+            )
+
     except Exception as e:
         print(f" 승인 처리 실패: {str(e)}")
+
+
+def process_reroute(document_id: int, new_department: str, user_name: str, db: Session):
+    """재분류 처리 - 새로운 부서 채널로 재전송"""
+    try:
+        document = db.query(Document).filter(Document.id == document_id).first()
+        if not document:
+            return
+
+        # 분석 결과 가져오기
+        analysis = db.query(AnalysisResult).filter(
+            AnalysisResult.document_id == document_id
+        ).first()
+
+        if not analysis:
+            return
+
+        # ai_result 재구성
+        ai_result = {
+            "department":    new_department,
+            "document_type": analysis.document_type,
+            "summary":       analysis.summary,
+            "keywords":      analysis.keywords,
+            "reasoning":     analysis.reasoning,
+            "confidence":    0.0
+        }
+
+        # 상태 다시 PENDING으로
+        document.status = StatusType.PENDING
+        db.commit()
+
+        # 새 부서 채널로 재전송
+        send_slack_notification(document_id, document.file_name, ai_result)
+
+        # 재분류 이력 저장
+        approval = ApprovalHistory(
+            document_id=document_id,
+            action=ActionType.APPROVED,
+            approved_by=f"{user_name}(재분류→{new_department})",
+        )
+        db.add(approval)
+        db.commit()
+
+        print(f"문서 {document_id} 재분류 완료 → {new_department}")
+
+    except Exception as e:
+        print(f" 재분류 처리 실패: {str(e)}")
