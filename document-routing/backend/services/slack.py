@@ -93,7 +93,7 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict):
         ]
     }
 
-    webhook_url = WEBHOOK_URLS.get(department)
+    webhook_url = WEBHOOK_URLS.get(department)   
     if not webhook_url:
         webhook_url = WEBHOOK_URLS.get("경영기획팀")
 

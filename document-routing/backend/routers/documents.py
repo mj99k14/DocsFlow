@@ -2,11 +2,12 @@ import os
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType
-from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse
+from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType, ApprovalHistory
+from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse, ApprovalResponse
 from services.pdf import extract_text_from_pdf
 from services.ai import analyze_document
 from services.slack import send_slack_notification
+from database import sessionLocal
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -15,7 +16,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # ── 백그라운드 파이프라인 ─────────────────────────────────────
-def process_document(document_id: int, file_path: str, db: Session):
+def process_document(document_id: int, file_path: str):
+    db = sessionLocal()
     try:
         # 1. 상태 → ANALYZING
         document = db.query(Document).filter(Document.id == document_id).first()
@@ -74,6 +76,8 @@ def process_document(document_id: int, file_path: str, db: Session):
             document.status = StatusType.FAILED
             db.commit()
         print(f" 문서 {document_id} 분석 실패: {str(e)}")
+    finally:
+        db.close()
 
 
 # ── 1. 문서 업로드 ───────────────────────────────────────────
@@ -101,7 +105,7 @@ async def upload_document(
     db.refresh(document)
 
     # 백그라운드에서 AI 분석 실행 (즉시 응답 반환)
-    background_tasks.add_task(process_document, document.id, file_path, db)
+    background_tasks.add_task(process_document, document.id, file_path)
 
     return document
 
@@ -121,7 +125,18 @@ def get_document_status(document_id: int, db: Session = Depends(get_db)):
     return document
 
 
-# ── 4. 문서 상세 조회 (분석 결과 포함) ──────────────────────
+# ── 4. 승인 이력 조회 ────────────────────────────────────────
+@router.get("/{document_id}/history", response_model=list[ApprovalResponse])
+def get_document_history(document_id: int, db: Session = Depends(get_db)):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+    return db.query(ApprovalHistory).filter(
+        ApprovalHistory.document_id == document_id
+    ).order_by(ApprovalHistory.created_at.desc()).all()
+
+
+# ── 5. 문서 상세 조회 (분석 결과 포함) ──────────────────────
 @router.get("/{document_id}", response_model=DocumentDetailResponse)
 def get_document_detail(document_id: int, db: Session = Depends(get_db)):
     document = db.query(Document).filter(Document.id == document_id).first()
