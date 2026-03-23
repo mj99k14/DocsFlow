@@ -1,8 +1,7 @@
 import json
-from fastapi import APIRouter, Request, BackgroundTasks, Depends
+from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from database import get_db
+from database import sessionLocal
 from models import Document, AnalysisResult, ApprovalHistory, StatusType, ActionType
 from services.slack import send_rejected_notification, send_slack_notification
 
@@ -17,7 +16,6 @@ router = APIRouter(
 async def slack_callback(
     request: Request,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
 ):
     """
     Slack 버튼 클릭 시 호출되는 Callback API
@@ -49,7 +47,6 @@ async def slack_callback(
             document_id,
             new_department,
             user_name,
-            db
         )
         return JSONResponse(content={"ok": True})
 
@@ -71,15 +68,15 @@ async def slack_callback(
         document_id,
         action_type,
         user_name,
-        db
     )
 
     # Slack 3초 규칙
     return JSONResponse(content={"ok": True})
 
 
-def process_approval(document_id: int, action_type: ActionType, user_name: str, db: Session):
+def process_approval(document_id: int, action_type: ActionType, user_name: str):
     """승인/반려/보류 처리"""
+    db = sessionLocal()
     try:
         document = db.query(Document).filter(Document.id == document_id).first()
         if not document:
@@ -134,10 +131,13 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
 
     except Exception as e:
         print(f" 승인 처리 실패: {str(e)}")
+    finally:
+        db.close()
 
 
-def process_reroute(document_id: int, new_department: str, user_name: str, db: Session):
+def process_reroute(document_id: int, new_department: str, user_name: str):
     """재분류 처리 - 새로운 부서 채널로 재전송"""
+    db = sessionLocal()
     try:
         document = db.query(Document).filter(Document.id == document_id).first()
         if not document:
@@ -181,3 +181,5 @@ def process_reroute(document_id: int, new_department: str, user_name: str, db: S
 
     except Exception as e:
         print(f" 재분류 처리 실패: {str(e)}")
+    finally:
+        db.close()
