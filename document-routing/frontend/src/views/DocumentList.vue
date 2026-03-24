@@ -182,8 +182,8 @@ export default {
         'PENDING':   'status-pending',
         'ANALYZING': 'status-analyzing',
         'COMPLETED': 'status-completed',
-        'APPROVED' : 'status-approvrd',
-        'REJECTED' : 'status-rehected',
+        'APPROVED' : 'status-approved',
+        'REJECTED' : 'status-rejected',
         'FAILED':    'status-failed',
         'HELD':      'status-held',
       }

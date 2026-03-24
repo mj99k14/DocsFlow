@@ -14,6 +14,7 @@ WEBHOOK_URLS = {
 
 # 관리자 채널 Webhook URL
 WEBHOOK_ADMIN = os.getenv("SLACK_WEBHOOK_ADMIN")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 
 def send_slack_notification(document_id: int, file_name: str, ai_result: dict):
@@ -63,6 +64,13 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict):
             {
                 "type": "section",
                 "text": {"type": "mrkdwn", "text": f"*🤖 AI 판단 근거*\n{reasoning}"}
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*📎 원본 파일*\n<{BASE_URL}/documents/{document_id}/file|{file_name} 다운로드>"
+                }
             },
             {"type": "divider"},
             {

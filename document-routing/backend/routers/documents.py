@@ -8,7 +8,7 @@ from services.pdf import extract_text_from_pdf
 from services.ai import analyze_document
 from services.slack import send_slack_notification
 from database import sessionLocal
-
+from fastapi.responses import FileResponse
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 UPLOAD_DIR = "./uploaded_files"
@@ -136,11 +136,25 @@ def get_document_history(document_id: int, db: Session = Depends(get_db)):
     ).order_by(ApprovalHistory.created_at.desc()).all()
 
 
-# ── 5. 문서 상세 조회 (분석 결과 포함) ──────────────────────
+# ── 5. 파일 다운로드 ──────────────────────────────────────────
+@router.get("/{document_id}/file")
+def download_file(document_id: int, db: Session = Depends(get_db)):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+    if not os.path.exists(document.file_path):
+        raise HTTPException(status_code=404, detail="파일이 존재하지 않습니다")
+    return FileResponse(
+        path=document.file_path,
+        filename=document.file_name,
+        media_type="application/pdf"
+    )
+
+
+# ── 6. 문서 상세 조회 (분석 결과 포함) ──────────────────────
 @router.get("/{document_id}", response_model=DocumentDetailResponse)
 def get_document_detail(document_id: int, db: Session = Depends(get_db)):
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
     return document
-
