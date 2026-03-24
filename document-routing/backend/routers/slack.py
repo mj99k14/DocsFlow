@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from database import sessionLocal
 from models import Document, AnalysisResult, ApprovalHistory, StatusType, ActionType
-from services.slack import send_rejected_notification, send_slack_notification
+from services.slack import send_rejected_notification, send_slack_notification, update_slack_message
 
 router = APIRouter(
     prefix="/slack",
@@ -33,10 +33,12 @@ async def slack_callback(
     if not actions:
         return JSONResponse(content={"ok": True})
 
-    action    = actions[0]
-    action_id = action.get("action_id")
-    value     = action.get("value")
-    user_name = payload.get("user", {}).get("name", "unknown")
+    action       = actions[0]
+    action_id    = action.get("action_id")
+    value        = action.get("value")
+    user_name    = payload.get("user", {}).get("name", "unknown")
+    response_url = payload.get("response_url", "")
+    print(f" response_url: {response_url!r}")
 
     # 재분류 버튼 처리 (reroute_*)
     if action_id.startswith("reroute_"):
@@ -47,6 +49,7 @@ async def slack_callback(
             document_id,
             new_department,
             user_name,
+            response_url,
         )
         return JSONResponse(content={"ok": True})
 
@@ -68,13 +71,14 @@ async def slack_callback(
         document_id,
         action_type,
         user_name,
+        response_url,
     )
 
     # Slack 3초 규칙
     return JSONResponse(content={"ok": True})
 
 
-def process_approval(document_id: int, action_type: ActionType, user_name: str):
+def process_approval(document_id: int, action_type: ActionType, user_name: str, response_url: str = ""):
     """승인/반려/보류 처리"""
     db = sessionLocal()
     try:
@@ -85,8 +89,8 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str):
 
         # 상태 업데이트
         status_map = {
-            ActionType.APPROVED: StatusType.COMPLETED,
-            ActionType.REJECTED: StatusType.FAILED,
+            ActionType.APPROVED: StatusType.APPROVED,
+            ActionType.REJECTED: StatusType.REJECTED,
             ActionType.HELD:     StatusType.HELD,
         }
         document.status = status_map[action_type]
@@ -102,6 +106,10 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str):
         db.commit()
 
         print(f" 문서 {document_id} → {action_type.value} ({user_name})")
+
+        # Slack 메시지 업데이트 (버튼 제거 + 결과 표시)
+        if response_url:
+            update_slack_message(response_url, action_type.value, user_name)
 
         # 반려 시 관리자 채널로 재분류 요청
         if action_type == ActionType.REJECTED:
@@ -135,7 +143,7 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str):
         db.close()
 
 
-def process_reroute(document_id: int, new_department: str, user_name: str):
+def process_reroute(document_id: int, new_department: str, user_name: str, response_url: str = ""):
     """재분류 처리 - 새로운 부서 채널로 재전송"""
     db = sessionLocal()
     try:
@@ -178,6 +186,10 @@ def process_reroute(document_id: int, new_department: str, user_name: str):
         db.commit()
 
         print(f"문서 {document_id} 재분류 완료 → {new_department}")
+
+        # Slack 메시지 업데이트 (버튼 제거 + 결과 표시)
+        if response_url:
+            update_slack_message(response_url, "APPROVED", f"{user_name}(재분류→{new_department})")
 
     except Exception as e:
         print(f" 재분류 처리 실패: {str(e)}")

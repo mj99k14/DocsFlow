@@ -184,3 +184,32 @@ def send_rejected_notification(document_id: int, file_name: str, rejected_by: st
 
     print(f" 관리자 채널 재분류 요청 전송 완료 ({file_name})")
     return True
+
+
+def update_slack_message(response_url: str, action_type: str, user_name: str):
+    """
+    버튼 클릭 후 Slack 메시지를 결과 메시지로 교체 (버튼 제거)
+    """
+    label_map = {
+        "APPROVED": "✅ 승인",
+        "REJECTED": "❌ 반려",
+        "HELD":     "⏸ 보류",
+    }
+    label = label_map.get(action_type, action_type)
+
+    message = {
+        "replace_original": True,
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"{label} 처리되었습니다. (담당자: *{user_name}*)"
+                }
+            }
+        ]
+    }
+
+    response = requests.post(response_url, json=message)
+    if response.status_code != 200:
+        print(f" Slack 메시지 업데이트 실패: {response.status_code} {response.text}")

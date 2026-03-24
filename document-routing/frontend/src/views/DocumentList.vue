@@ -182,6 +182,8 @@ export default {
         'PENDING':   'status-pending',
         'ANALYZING': 'status-analyzing',
         'COMPLETED': 'status-completed',
+        'APPROVED' : 'status-approvrd',
+        'REJECTED' : 'status-rehected',
         'FAILED':    'status-failed',
         'HELD':      'status-held',
       }
@@ -189,13 +191,15 @@ export default {
     },
 
     getStatusText(status) {
-      const map = {
+       const map = {
         'PENDING':   '⏳ 대기 중',
         'ANALYZING': '🔍 분석 중',
-        'COMPLETED': '✅ 완료',
-        'FAILED':    '❌ 반려/실패',
+        'COMPLETED': '📋 검토 대기',
+        'APPROVED':  '✅ 승인',     
+        'REJECTED':  '❌ 반려',      
         'HELD':      '⏸ 보류',
-      }
+        'FAILED':    '💥 분석 실패',
+    }
       return map[status] || status
     },
 

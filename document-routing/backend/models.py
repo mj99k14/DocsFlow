@@ -11,6 +11,8 @@ class StatusType(str, enum.Enum):
     PENDING    = "PENDING"      # 업로드 완료, 분석 대기
     ANALYZING  = "ANALYZING"    # AI 분석 중
     COMPLETED  = "COMPLETED"    # 분석 완료
+    APPROVED  = "APPROVED"  # 담당자 승인
+    REJECTED = "REJECTED"# 담당자 반려
     FAILED     = "FAILED"       # 분석 실패
     HELD = "HELD" #반려
 
