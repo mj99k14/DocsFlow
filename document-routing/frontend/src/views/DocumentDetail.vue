@@ -70,7 +70,7 @@
     </div>
 
       <!-- 추천 부서 -->
-      <div v-if="document.departments && document.departments.length > 0" class="dept-section">
+      <div v-if="document.analysis && document.analysis.departments.length > 0" class="dept-section">
         <h2 class="section-title">🏢 AI 추천 부서</h2>
         <div class="dept-card">
           <div class="dept-name">{{ getDepartmentName() }}</div>
@@ -158,14 +158,14 @@ export default {
     },
 
     getDepartmentName() {
-      if (!this.document?.departments?.length) return '미확인'
-      const deptId = this.document.departments[0].department_id
+      if (!this.document?.analysis.departments?.length) return '미확인'
+      const deptId = this.document.analysis.departments[0].department_id
       return this.deptMap[deptId] || '미확인'
     },
 
     getDepartmentConfidence() {
-      if (!this.document?.departments?.length) return 0
-      return this.document.departments[0].confidence || 0
+      if (!this.document?.analysis?.departments?.length) return 0
+      return this.document.analysis.departments[0].confidence || 0
     },
 
     getConfidenceClass(conf) {
