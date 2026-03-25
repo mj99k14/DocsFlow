@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from database import sessionLocal
 from models import Document, AnalysisResult, ApprovalHistory, StatusType, ActionType
-from services.slack import send_rejected_notification, send_slack_notification, update_slack_message
+from services.slack import send_rejected_notification, send_slack_notification, update_slack_message, send_held_notification
 
 router = APIRouter(
     prefix="/slack",
@@ -134,7 +134,20 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
                 document_id,
                 document.file_name,
                 user_name,
-                original_department
+                original_department,
+                analysis,
+            )
+
+        # 보류 시 관리자 채널 알림
+        if action_type == ActionType.HELD:
+            analysis = db.query(AnalysisResult).filter(
+                AnalysisResult.document_id == document_id
+            ).first()
+            send_held_notification(
+                document_id,
+                document.file_name,
+                user_name,
+                analysis,
             )
 
     except Exception as e:

@@ -13,7 +13,7 @@ WEBHOOK_URLS = {
 }
 
 # 관리자 채널 Webhook URL
-WEBHOOK_ADMIN = os.getenv("SLACK_WEBHOOK_ADMIN")
+WEBHOOK_ADMIN = os.getenv("SLACK_WEBHOOK_REJECT")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 
@@ -116,19 +116,16 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict):
     return True
 
 
-def send_rejected_notification(document_id: int, file_name: str, rejected_by: str, original_department: str):
-    """
-    반려 시 관리자 채널로 재분류 요청 알림 전송
-
-    Args:
-        document_id:          문서 ID
-        file_name:            파일 이름
-        rejected_by:          반려한 담당자 Slack 유저명
-        original_department:  원래 AI가 추천했던 부서
-    """
+def send_rejected_notification(document_id: int, file_name: str, rejected_by: str, original_department: str, analysis=None):
+    """반려 시 관리자 채널로 재분류 요청 알림 전송"""
     if not WEBHOOK_ADMIN:
         print(" 관리자 Webhook URL이 설정되지 않았습니다")
         return False
+
+    summary      = analysis.summary       if analysis else "요약 없음"
+    keywords     = analysis.keywords      if analysis else []
+    doc_type     = analysis.document_type if analysis else "미확인"
+    keywords_str = ", ".join(keywords) if keywords else "없음"
 
     message = {
         "blocks": [
@@ -140,16 +137,24 @@ def send_rejected_notification(document_id: int, file_name: str, rejected_by: st
                 "type": "section",
                 "fields": [
                     {"type": "mrkdwn", "text": f"*파일명*\n{file_name}"},
-                    {"type": "mrkdwn", "text": f"*문서 ID*\n{document_id}"},
+                    {"type": "mrkdwn", "text": f"*문서 유형*\n{doc_type}"},
                     {"type": "mrkdwn", "text": f"*AI 추천 부서*\n{original_department}"},
                     {"type": "mrkdwn", "text": f"*반려한 담당자*\n{rejected_by}"},
                 ]
             },
             {
                 "type": "section",
+                "text": {"type": "mrkdwn", "text": f"*📝 문서 요약*\n{summary}"}
+            },
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"*🔑 키워드*\n{keywords_str}"}
+            },
+            {
+                "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*{original_department}* 담당자가 문서를 반려했습니다.\n올바른 부서로 재분류해 주세요."
+                    "text": f"*📎 원본 파일*\n<{BASE_URL}/documents/{document_id}/file|{file_name} 다운로드>"
                 }
             },
             {"type": "divider"},
@@ -221,3 +226,90 @@ def update_slack_message(response_url: str, action_type: str, user_name: str):
     response = requests.post(response_url, json=message)
     if response.status_code != 200:
         print(f" Slack 메시지 업데이트 실패: {response.status_code} {response.text}")
+
+
+def send_held_notification(document_id: int, file_name: str, held_by: str, analysis=None):
+    """보류 시 관리자 채널로 알림 전송"""
+    if not WEBHOOK_ADMIN:
+        print(" 관리자 Webhook URL이 설정되지 않았습니다")
+        return False
+
+    summary  = analysis.summary       if analysis else "요약 없음"
+    keywords = analysis.keywords      if analysis else []
+    doc_type = analysis.document_type if analysis else "미확인"
+    keywords_str = ", ".join(keywords) if keywords else "없음"
+
+    message = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "⏸ 문서가 보류되었습니다", "emoji": True}
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*파일명*\n{file_name}"},
+                    {"type": "mrkdwn", "text": f"*문서 유형*\n{doc_type}"},
+                    {"type": "mrkdwn", "text": f"*문서 ID*\n{document_id}"},
+                    {"type": "mrkdwn", "text": f"*보류한 담당자*\n{held_by}"},
+                ]
+            },
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"*📝 문서 요약*\n{summary}"}
+            },
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"*🔑 키워드*\n{keywords_str}"}
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*📎 원본 파일*\n<{BASE_URL}/documents/{document_id}/file|{file_name} 다운로드>"
+                }
+            },
+            {"type": "divider"},
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "⚖️ 법무팀", "emoji": True},
+                        "value": f"{document_id}|법무팀",
+                        "action_id": "reroute_legal"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "💰 재무팀", "emoji": True},
+                        "value": f"{document_id}|재무팀",
+                        "action_id": "reroute_finance"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "👥 인사팀", "emoji": True},
+                        "value": f"{document_id}|인사팀",
+                        "action_id": "reroute_hr"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "📊 경영기획팀", "emoji": True},
+                        "value": f"{document_id}|경영기획팀",
+                        "action_id": "reroute_planning"
+                    },
+                ]
+            }
+        ]
+    }
+
+    response = requests.post(WEBHOOK_ADMIN, json=message)
+    if response.status_code != 200:
+        print(f" 보류 알림 전송 실패: {response.status_code} {response.text}")
+        return False
+
+    print(f" 보류 알림 전송 완료 ({file_name})")
+    return True
