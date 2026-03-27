@@ -9,3 +9,5 @@ router = APIRouter(prefix="/departments", tags=["departments"])
 @router.get("/", response_model=list[DepartmentResponse])
 def get_departments(db: Session = Depends(get_db)):
     return db.query(Department).all()
+
+
