@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from database import get_db
 from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType, ApprovalHistory
 from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse, ApprovalResponse
@@ -111,9 +111,11 @@ async def upload_document(
 
 
 # ── 2. 문서 목록 조회 ────────────────────────────────────────
-@router.get("/", response_model=list[DocumentResponse])
+@router.get("/", response_model=list[DocumentDetailResponse])
 def get_documents(db: Session = Depends(get_db)):
-    return db.query(Document).order_by(Document.created_at.desc()).all()
+    return db.query(Document).options(
+        selectinload(Document.analysis).selectinload(AnalysisResult.departments)
+    ).order_by(Document.created_at.desc()).all()
 
 
 # ── 3. 문서 상태 조회 ────────────────────────────────────────

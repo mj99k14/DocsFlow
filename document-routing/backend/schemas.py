@@ -103,3 +103,7 @@ class DocumentDetailResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DepartmentUpdate(BaseModel):
+    slack_channel: Optional[str] = None
