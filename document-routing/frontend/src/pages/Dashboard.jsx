@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, CheckCircle, Clock, TrendingUp, ArrowUpRight } from 'lucide-react'
+import { FileText, CheckCircle, Clock, TrendingUp, ArrowUpRight, Search, X } from 'lucide-react'
 import { getDocuments, getDepartments } from '../services/api.js'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,9 @@ const STATUS_BADGE = {
 export default function Dashboard() {
   const [documents, setDocuments] = useState([])
   const [deptMap, setDeptMap] = useState({})
+  const [searchText, setSearchText] = useState('')
+  const [filterStatus, setFilterStatus] = useState('ALL')
+  const [filterDept, setFilterDept] = useState('ALL')
   const navigate = useNavigate()
   const pollingRef = useRef(null)
 
@@ -40,6 +43,14 @@ export default function Dashboard() {
     pollingRef.current = setInterval(load, 5000)
     return () => clearInterval(pollingRef.current)
   }, [])
+
+  const filteredDocuments = documents.filter(doc => {
+    const deptName = deptMap[doc.analysis?.departments?.[0]?.department_id] || ''
+    const matchSearch = doc.file_name.toLowerCase().includes(searchText.toLowerCase())
+    const matchStatus = filterStatus === 'ALL' || doc.status === filterStatus
+    const matchDept = filterDept === 'ALL' || deptName === filterDept
+    return matchSearch && matchStatus && matchDept
+  })
 
   const analyzed = documents.filter(d => d.analysis?.departments?.[0]?.confidence)
   const avgConf = analyzed.length > 0
@@ -114,12 +125,56 @@ export default function Dashboard() {
 
       {/* 문서 테이블 */}
       <Card style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>업로드된 문서</h3>
-            <p style={{ fontSize: 13, color: '#9CA3AF', marginTop: 2 }}>AI가 자동으로 분류한 문서 목록</p>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #F3F4F6', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>업로드된 문서</h3>
+              <p style={{ fontSize: 13, color: '#9CA3AF', marginTop: 2 }}>AI가 자동으로 분류한 문서 목록</p>
+            </div>
+            <span style={{ fontSize: 13, color: '#9CA3AF' }}>{filteredDocuments.length}/{documents.length}건</span>
           </div>
-          <span style={{ fontSize: 13, color: '#9CA3AF' }}>총 {documents.length}건</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {/* 검색 */}
+            <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
+              <Search size={14} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                placeholder="파일명 검색..."
+                style={{ width: '100%', boxSizing: 'border-box', height: 34, paddingLeft: 32, paddingRight: searchText ? 28 : 12, border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, color: '#111827', outline: 'none', background: '#FAFAFA' }}
+              />
+              {searchText && (
+                <button onClick={() => setSearchText('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                  <X size={13} color="#9CA3AF" />
+                </button>
+              )}
+            </div>
+            {/* 상태 필터 */}
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              style={{ height: 34, padding: '0 10px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, color: '#374151', background: '#FAFAFA', cursor: 'pointer', outline: 'none' }}
+            >
+              <option value="ALL">전체 상태</option>
+              <option value="PENDING">대기중</option>
+              <option value="ANALYZING">분석중</option>
+              <option value="COMPLETED">완료</option>
+              <option value="APPROVED">승인됨</option>
+              <option value="REJECTED">반려</option>
+              <option value="HELD">보류</option>
+            </select>
+            {/* 부서 필터 */}
+            <select
+              value={filterDept}
+              onChange={e => setFilterDept(e.target.value)}
+              style={{ height: 34, padding: '0 10px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, color: '#374151', background: '#FAFAFA', cursor: 'pointer', outline: 'none' }}
+            >
+              <option value="ALL">전체 부서</option>
+              {Object.values(deptMap).map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -134,7 +189,7 @@ export default function Dashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.length === 0 ? (
+              {filteredDocuments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} style={{ textAlign: 'center', padding: '64px 0' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -147,7 +202,7 @@ export default function Dashboard() {
                   </TableCell>
                 </TableRow>
               ) : (
-                documents.map(doc => {
+                filteredDocuments.map(doc => {
                   const badge = STATUS_BADGE[doc.status] || STATUS_BADGE.PENDING
                   const deptName = deptMap[doc.analysis?.departments?.[0]?.department_id]
                   return (
@@ -167,7 +222,7 @@ export default function Dashboard() {
                         </div>
                       </TableCell>
                       <TableCell style={{ fontSize: 13, color: '#6B7280' }}>
-                        {new Date(doc.created_at).toLocaleDateString('ko-KR')}
+                        {new Date(doc.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                       </TableCell>
                       <TableCell>
                         {deptName ? (
