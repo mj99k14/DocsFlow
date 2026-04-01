@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { approveDocument } from '../services/api.js'
 
 const STATUS_BADGE = {
   PENDING:   { label: '대기중',    className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
@@ -285,7 +286,10 @@ export default function DocumentDetail() {
                 size="lg"
                 className="w-full gap-2"
                 style={{ background: '#5E6AD2', fontSize: 14 }}
-                onClick={() => toast.success('슬랙 알림이 전송되었습니다.')}
+                onClick={async () =>{
+                  await approveDocument(doc.id,{action:'APPROVED',approved_by:'관리자'})
+                  toast.success('승인되었습니다!')
+                }}
               >
                 <CheckCircle size={16} />
                 Approve & Send to Slack

@@ -6,9 +6,11 @@ from models import Document, AnalysisResult, DocumentDepartment, Department, Sta
 from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse, ApprovalResponse
 from services.pdf import extract_text_from_pdf
 from services.ai import analyze_document
-from services.slack import send_slack_notification
+from services.slack import send_slack_notification, send_approved_notification
 from database import sessionLocal
 from fastapi.responses import FileResponse
+from schemas import ApprovalRequest
+
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 UPLOAD_DIR = "./uploaded_files"
@@ -160,3 +162,56 @@ def get_document_detail(document_id: int, db: Session = Depends(get_db)):
     if not document:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
     return document
+
+#7.문서 승인 /반려/보류
+
+@router.post("/{document_id}/approve", response_model=ApprovalResponse)
+def approve_document(
+    document_id: int,
+    data: ApprovalRequest,
+    db: Session = Depends(get_db)
+):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+    status_map = {
+        "APPROVED": StatusType.APPROVED,
+        "REJECTED": StatusType.REJECTED,
+        "HELD":     StatusType.HELD,
+    }
+    document.status = status_map[data.action]
+    db.commit()
+    approval = ApprovalHistory(
+        document_id=document_id,
+        action=data.action,
+        approved_by=data.approved_by,
+    )
+    db.add(approval)
+    db.commit()
+    db.refresh(approval)
+
+    # 승인 시 해당 부서 Slack 채널로 알림 재전송
+    if data.action == "APPROVED":
+        analysis = db.query(AnalysisResult).filter(AnalysisResult.document_id == document_id).first()
+        if analysis:
+            doc_dept = db.query(DocumentDepartment).filter(DocumentDepartment.analysis_id == analysis.id).first()
+            dept_name = ""
+            if doc_dept:
+                dept = db.query(Department).filter(Department.id == doc_dept.department_id).first()
+                dept_name = dept.name if dept else ""
+            ai_result = {
+                "department":    dept_name,
+                "document_type": analysis.document_type,
+                "summary":       analysis.summary,
+                "keywords":      analysis.keywords,
+                "reasoning":     analysis.reasoning,
+                "confidence":    doc_dept.confidence if doc_dept else 0.0,
+            }
+            try:
+               send_approved_notification(document_id, document.file_name, dept_name, data.approved_by)
+            except Exception as e:
+                print(f" Slack 알림 전송 실패: {str(e)}")
+
+    return approval
+    
+    

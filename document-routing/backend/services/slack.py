@@ -228,6 +228,42 @@ def update_slack_message(response_url: str, action_type: str, user_name: str):
         print(f" Slack 메시지 업데이트 실패: {response.status_code} {response.text}")
 
 
+def send_approved_notification(document_id: int, file_name: str, dept_name: str, approved_by: str):
+    """웹에서 승인 시 해당 부서 채널로 승인 완료 알림 전송 (버튼 없음)"""
+    webhook_url = WEBHOOK_URLS.get(dept_name) or WEBHOOK_URLS.get("경영기획팀")
+    if not webhook_url:
+        raise Exception("Slack Webhook URL이 설정되지 않았습니다")
+
+    message = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "✅ 문서가 승인되었습니다", "emoji": True}
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*파일명*\n{file_name}"},
+                    {"type": "mrkdwn", "text": f"*승인 부서*\n{dept_name}"},
+                    {"type": "mrkdwn", "text": f"*승인자*\n{approved_by}"},
+                ]
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*📎 원본 파일*\n<{BASE_URL}/documents/{document_id}/file|{file_name} 다운로드>"
+                }
+            },
+        ]
+    }
+
+    response = requests.post(webhook_url, json=message)
+    if response.status_code != 200:
+        raise Exception(f"Slack 전송 실패: {response.status_code} {response.text}")
+    print(f" 승인 알림 전송 완료 → {dept_name} ({file_name})")
+
+
 def send_held_notification(document_id: int, file_name: str, held_by: str, analysis=None):
     """보류 시 관리자 채널로 알림 전송"""
     if not WEBHOOK_ADMIN:

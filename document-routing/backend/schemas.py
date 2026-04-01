@@ -75,7 +75,6 @@ class DocumentDepartmentResponse(BaseModel):
 
 # 승인 요청 (Slack에서 버튼 클릭 시)
 class ApprovalRequest(BaseModel):
-    document_id: int
     action     : ActionType   # APPROVED / REJECTED
     approved_by: str          # Slack 유저명
 
