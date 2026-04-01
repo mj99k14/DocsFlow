@@ -17,7 +17,14 @@ export default function UploadPage() {
     if (pdfs.length < Array.from(newFiles).length) {
       toast.error('PDF 파일만 업로드 가능합니다')
     }
-    setFiles(prev => [...prev, ...pdfs])
+    setFiles(prev => {
+      const existingNames = new Set(prev.map(f => f.name))
+      const duplicates = pdfs.filter(f => existingNames.has(f.name))
+      if (duplicates.length > 0) {
+        toast.error(`이미 추가된 파일입니다: ${duplicates.map(f => f.name).join(', ')}`)
+      }
+      return [...prev, ...pdfs.filter(f => !existingNames.has(f.name))]
+    })
   }
 
   const handleDrop = (e) => {

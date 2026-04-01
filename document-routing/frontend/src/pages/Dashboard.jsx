@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, CheckCircle, Clock, Upload, TrendingUp, ArrowUpRight } from 'lucide-react'
-import { getDocuments, getDepartments, uploadDocument } from '../services/api.js'
+import { FileText, CheckCircle, Clock, TrendingUp, ArrowUpRight } from 'lucide-react'
+import { getDocuments, getDepartments } from '../services/api.js'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { toast } from 'sonner'
 
 const STATUS_BADGE = {
   PENDING:   { label: '대기중',    className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
@@ -23,7 +22,6 @@ const STATUS_BADGE = {
 export default function Dashboard() {
   const [documents, setDocuments] = useState([])
   const [deptMap, setDeptMap] = useState({})
-  const [uploading, setUploading] = useState(false)
   const navigate = useNavigate()
   const pollingRef = useRef(null)
 
@@ -42,20 +40,6 @@ export default function Dashboard() {
     pollingRef.current = setInterval(load, 5000)
     return () => clearInterval(pollingRef.current)
   }, [])
-
-  const handleUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    if (!file.name.endsWith('.pdf')) { toast.error('PDF 파일만 업로드 가능합니다'); return }
-    setUploading(true)
-    try {
-      await uploadDocument(file)
-      toast.success('업로드 완료! AI가 분석 중입니다.')
-      await load()
-    } catch (err) {
-      toast.error('업로드 실패: ' + (err.response?.data?.detail || err.message))
-    } finally { setUploading(false); e.target.value = '' }
-  }
 
   const analyzed = documents.filter(d => d.analysis?.departments?.[0]?.confidence)
   const avgConf = analyzed.length > 0
@@ -106,13 +90,6 @@ export default function Dashboard() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 4 }}>대시보드</h1>
           <p style={{ fontSize: 14, color: '#6B7280' }}>업로드된 문서의 AI 분류 현황을 확인하세요</p>
         </div>
-        <label style={{ cursor: 'pointer' }}>
-          <Button disabled={uploading} style={{ background: '#5E6AD2', gap: 8 }}>
-            <Upload size={15} />
-            {uploading ? 'AI 분석 중...' : 'PDF 업로드'}
-          </Button>
-          <input type="file" accept=".pdf" onChange={handleUpload} style={{ display: 'none' }} />
-        </label>
       </div>
 
       {/* 통계 카드 */}

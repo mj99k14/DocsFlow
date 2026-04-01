@@ -67,6 +67,7 @@ export default function DocumentDetail() {
   const deptId = doc.analysis?.departments?.[0]?.department_id
   const deptName = deptMap[deptId] || '미확인'
   const badge = STATUS_BADGE[doc.status] || STATUS_BADGE.PENDING
+  const isProcessed = ['APPROVED', 'REJECTED', 'HELD'].includes(doc.status)
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -285,14 +286,22 @@ export default function DocumentDetail() {
               <Button
                 size="lg"
                 className="w-full gap-2"
-                style={{ background: '#5E6AD2', fontSize: 14 }}
+                disabled={isProcessed}
+                style={{
+                  background: isProcessed ? '#E5E7EB' : '#5E6AD2',
+                  color: isProcessed ? '#9CA3AF' : '#fff',
+                  fontSize: 14,
+                  cursor: isProcessed ? 'not-allowed' : 'pointer',
+                }}
                 onClick={async () =>{
+                  if (isProcessed) return
                   await approveDocument(doc.id,{action:'APPROVED',approved_by:'관리자'})
+                  setDoc(prev => ({ ...prev, status: 'APPROVED' }))
                   toast.success('승인되었습니다!')
                 }}
               >
                 <CheckCircle size={16} />
-                Approve & Send to Slack
+                {isProcessed ? '처리 완료' : 'Approve & Send to Slack'}
               </Button>
             </Card>
           </div>
