@@ -116,7 +116,7 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
             analysis = db.query(AnalysisResult).filter(
                 AnalysisResult.document_id == document_id
             ).first()
-            original_department = analysis.document_type if analysis else "미확인"
+            original_department = "미확인"
 
             # 분석결과에서 추천 부서 가져오기
             from models import DocumentDepartment, Department

@@ -7,6 +7,7 @@ export const getDocument = (id) => axios.get(`${API_URL}/documents/${id}`).then(
 export const getDocumentHistory = (id) => axios.get(`${API_URL}/documents/${id}/history`).then(r => r.data)
 export const getDepartments = () => axios.get(`${API_URL}/departments/`).then(r => r.data)
 export const updateDepartment = (id, data) => axios.put(`${API_URL}/departments/${id}`, data).then(r => r.data)
+export const createDepartment = (data) => axios.post(`${API_URL}/departments/`, data).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
 
 export const uploadDocument = (file) => {

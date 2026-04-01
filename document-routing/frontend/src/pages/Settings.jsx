@@ -1,26 +1,125 @@
 import { useState, useEffect } from 'react'
-import { Slack, Bell, Lock, Building2, Edit2 } from 'lucide-react'
-import { getDepartments, updateDepartment } from '../services/api.js'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
+import { MessageSquare, Bell, Lock, Building2, Edit2, Check, X, Plus } from 'lucide-react'
+import { getDepartments, updateDepartment, createDepartment } from '../services/api.js'
 import { toast } from 'sonner'
+
+const SECTION_ICONS = {
+  slack:    { bg: '#EEF0FF', color: '#5E6AD2', Icon: MessageSquare },
+  dept:     { bg: '#EFF6FF', color: '#3B82F6', Icon: Building2 },
+  notify:   { bg: '#ECFDF5', color: '#10B981', Icon: Bell },
+  security: { bg: '#FEF2F2', color: '#EF4444', Icon: Lock },
+}
+
+function SectionHeader({ type, title, desc }) {
+  const { bg, color, Icon } = SECTION_ICONS[type]
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 10,
+        background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <Icon size={18} color={color} />
+      </div>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{title}</div>
+        <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{desc}</div>
+      </div>
+    </div>
+  )
+}
+
+function Card({ children, style }) {
+  return (
+    <div style={{
+      background: '#fff',
+      border: '1px solid #EBEBEB',
+      borderRadius: 12,
+      padding: '20px 24px',
+      ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function FieldRow({ label, hint, children }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{label}</label>
+      {children}
+      {hint && <span style={{ fontSize: 11, color: '#9CA3AF' }}>{hint}</span>}
+    </div>
+  )
+}
+
+function StyledInput({ value, onChange, placeholder, style, autoFocus, onKeyDown }) {
+  return (
+    <input
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      onKeyDown={onKeyDown}
+      style={{
+        height: 36, padding: '0 12px',
+        border: '1px solid #EBEBEB', borderRadius: 8,
+        fontSize: 13, color: '#111827', outline: 'none',
+        width: '100%', boxSizing: 'border-box',
+        background: '#FAFAFA',
+        transition: 'border-color 0.15s',
+        ...style,
+      }}
+      onFocus={e => e.target.style.borderColor = '#5E6AD2'}
+      onBlur={e => e.target.style.borderColor = '#EBEBEB'}
+    />
+  )
+}
+
+function ToggleRow({ label, desc, defaultChecked }) {
+  const [on, setOn] = useState(defaultChecked ?? false)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0' }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{label}</div>
+        <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{desc}</div>
+      </div>
+      <button
+        onClick={() => setOn(v => !v)}
+        style={{
+          width: 42, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+          background: on ? '#5E6AD2' : '#E5E7EB',
+          position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+        }}
+      >
+        <div style={{
+          position: 'absolute', top: 3,
+          left: on ? 21 : 3,
+          width: 18, height: 18, borderRadius: '50%',
+          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+          transition: 'left 0.2s',
+        }} />
+      </button>
+    </div>
+  )
+}
+
+function Divider() {
+  return <div style={{ height: 1, background: '#F3F4F6', margin: '0 -24px' }} />
+}
 
 export default function Settings() {
   const [departments, setDepartments] = useState([])
   const [editingIndex, setEditingIndex] = useState(null)
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [defaultChannel, setDefaultChannel] = useState('')
+  const [addingDept, setAddingDept] = useState(false)
+  const [newDept, setNewDept] = useState({ name: '', slack_channel: '' })
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error)
+    setWebhookUrl(localStorage.getItem('slack_webhook_url') || '')
+    setDefaultChannel(localStorage.getItem('slack_default_channel') || '')
   }, [])
-
-  const handleEdit = (index) => setEditingIndex(index)
 
   const handleSlackChannelChange = (index, value) => {
     const updated = [...departments]
@@ -39,220 +138,237 @@ export default function Settings() {
     }
   }
 
-  const handleSave = () => toast.success('설정이 저장되었습니다!')
+  const handleAddDept = async () => {
+    if (!newDept.name.trim()) return
+    try {
+      const created = await createDepartment(newDept)
+      setDepartments(prev => [...prev, created])
+      setNewDept({ name: '', slack_channel: '' })
+      setAddingDept(false)
+      toast.success('부서가 추가되었습니다!')
+    } catch (e) {
+      toast.error('추가 실패: ' + e.message)
+    }
+  }
+
+  const handleSave = () => {
+    localStorage.setItem('slack_webhook_url', webhookUrl)
+    localStorage.setItem('slack_default_channel', defaultChannel)
+    toast.success('설정이 저장되었습니다!')
+  }
 
   return (
-    <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ padding: '28px 32px', maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* 페이지 헤더 */}
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 4 }}>설정</h1>
-        <p style={{ fontSize: 14, color: '#6B7280' }}>Slack 연동 및 부서 채널을 관리하세요</p>
+      <div style={{ marginBottom: 4 }}>
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: 0 }}>설정</h1>
+        <p style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>Slack 연동 및 부서 채널을 관리하세요</p>
       </div>
 
-      <div className="max-w-4xl space-y-6">
-
-      {/* Slack 연동 설정 */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-            <Slack className="w-6 h-6 text-purple-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Slack 연동 설정</h3>
-            <p className="text-sm text-gray-600">슬랙 워크스페이스와 연결하여 알림을 받으세요</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="slack-webhook">Webhook URL</Label>
-            <Input
-              id="slack-webhook"
-              type="text"
+      {/* Slack 연동 */}
+      <Card>
+        <SectionHeader type="slack" title="Slack 연동" desc="워크스페이스와 연결하여 알림을 받으세요" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <FieldRow label="Webhook URL" hint="Slack 워크스페이스의 Incoming Webhook URL을 입력하세요">
+            <StyledInput
+              value={webhookUrl}
+              onChange={e => setWebhookUrl(e.target.value)}
               placeholder="https://hooks.slack.com/services/..."
-              className="mt-2"
             />
-            <p className="text-xs text-gray-500 mt-1">Slack 워크스페이스의 Incoming Webhook URL을 입력하세요</p>
-          </div>
-
-          <div>
-            <Label htmlFor="default-channel">기본 채널</Label>
-            <Input id="default-channel" type="text" placeholder="#general" className="mt-2" />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="font-medium text-gray-900">실시간 알림</p>
-              <p className="text-sm text-gray-600">문서 업로드 시 즉시 알림 전송</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
+          </FieldRow>
+          <FieldRow label="기본 채널">
+            <StyledInput
+              value={defaultChannel}
+              onChange={e => setDefaultChannel(e.target.value)}
+              placeholder="#general"
+              style={{ maxWidth: 220 }}
+            />
+          </FieldRow>
+          <Divider />
+          <ToggleRow label="실시간 알림" desc="문서 업로드 시 즉시 알림 전송" defaultChecked />
         </div>
       </Card>
 
       {/* 부서 관리 */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-blue-600" />
+      <Card>
+        <SectionHeader type="dept" title="부서 관리" desc="각 부서의 Slack 채널을 설정하세요" />
+
+        <div style={{ border: '1px solid #F3F4F6', borderRadius: 8, overflow: 'hidden' }}>
+          {/* 테이블 헤더 */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr 80px',
+            background: '#FAFAFA', padding: '8px 16px',
+            borderBottom: '1px solid #F3F4F6',
+          }}>
+            {['부서명', 'Slack 채널', ''].map((h, i) => (
+              <span key={i} style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
+            ))}
           </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">부서 관리</h3>
-            <p className="text-sm text-gray-600">각 부서의 Slack 채널을 설정하세요</p>
-          </div>
+
+          {/* 부서 행 */}
+          {departments.map((dept, index) => (
+            <div
+              key={dept.id}
+              style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr 80px',
+                alignItems: 'center', padding: '10px 16px',
+                borderBottom: index < departments.length - 1 ? '1px solid #F9FAFB' : 'none',
+                background: editingIndex === index ? '#FAFBFF' : '#fff',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#5E6AD2', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{dept.name}</span>
+              </div>
+
+              <div>
+                {editingIndex === index ? (
+                  <StyledInput
+                    value={dept.slack_channel || ''}
+                    onChange={e => handleSlackChannelChange(index, e.target.value)}
+                    placeholder="#channel-name"
+                    autoFocus
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleSaveEdit(dept)
+                      if (e.key === 'Escape') setEditingIndex(null)
+                    }}
+                  />
+                ) : (
+                  <span style={{
+                    fontSize: 12, fontFamily: 'monospace',
+                    background: dept.slack_channel ? '#EEF0FF' : '#F3F4F6',
+                    color: dept.slack_channel ? '#5E6AD2' : '#9CA3AF',
+                    padding: '3px 8px', borderRadius: 5,
+                  }}>
+                    {dept.slack_channel || '미설정'}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                {editingIndex === index ? (
+                  <>
+                    <button
+                      onClick={() => handleSaveEdit(dept)}
+                      style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: '#5E6AD2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Check size={13} color="#fff" />
+                    </button>
+                    <button
+                      onClick={() => setEditingIndex(null)}
+                      style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #EBEBEB', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <X size={13} color="#6B7280" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setEditingIndex(index)}
+                    style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #EBEBEB', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Edit2 size={13} color="#6B7280" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* 새 부서 추가 행 */}
+          {addingDept && (
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr 80px',
+              alignItems: 'center', padding: '10px 16px',
+              borderTop: '1px solid #EEF0FF', background: '#FAFBFF',
+            }}>
+              <StyledInput
+                value={newDept.name}
+                onChange={e => setNewDept(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="부서명"
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleAddDept(); if (e.key === 'Escape') setAddingDept(false) }}
+              />
+              <div style={{ paddingLeft: 8 }}>
+                <StyledInput
+                  value={newDept.slack_channel}
+                  onChange={e => setNewDept(prev => ({ ...prev, slack_channel: e.target.value }))}
+                  placeholder="#channel-name"
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddDept(); if (e.key === 'Escape') setAddingDept(false) }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                <button
+                  onClick={handleAddDept}
+                  style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: '#5E6AD2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Check size={13} color="#fff" />
+                </button>
+                <button
+                  onClick={() => { setAddingDept(false); setNewDept({ name: '', slack_channel: '' }) }}
+                  style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #EBEBEB', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={13} color="#6B7280" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold text-gray-700 w-1/3">부서명</TableHead>
-                <TableHead className="font-semibold text-gray-700 w-1/2">연동될 Slack 채널</TableHead>
-                <TableHead className="font-semibold text-gray-700 w-24 text-right">작업</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {departments.map((dept, index) => (
-                <TableRow key={dept.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium text-gray-900">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                      {dept.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {editingIndex === index ? (
-                      <Input
-                        value={dept.slack_channel || ''}
-                        onChange={e => handleSlackChannelChange(index, e.target.value)}
-                        placeholder="#channel-name"
-                        className="max-w-xs"
-                        autoFocus
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSaveEdit(dept)
-                          if (e.key === 'Escape') setEditingIndex(null)
-                        }}
-                      />
-                    ) : (
-                      <span className="text-gray-700 font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                        {dept.slack_channel || '미설정'}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {editingIndex === index ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSaveEdit(dept)}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        저장
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(index)}
-                        className="text-gray-600 hover:text-gray-900 gap-1"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                        편집
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <Button variant="outline" className="w-full mt-4">새 부서 추가</Button>
+        {!addingDept && (
+          <button
+            onClick={() => setAddingDept(true)}
+            style={{
+              marginTop: 10, width: '100%', height: 34,
+              border: '1px dashed #D1D5DB', borderRadius: 8,
+              background: 'transparent', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              fontSize: 13, color: '#6B7280', fontWeight: 500,
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#5E6AD2'; e.currentTarget.style.color = '#5E6AD2' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#6B7280' }}
+          >
+            <Plus size={14} />
+            새 부서 추가
+          </button>
+        )}
       </Card>
 
       {/* 알림 설정 */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-            <Bell className="w-6 h-6 text-green-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">알림 설정</h3>
-            <p className="text-sm text-gray-600">받고 싶은 알림을 선택하세요</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="font-medium text-gray-900">문서 업로드 완료</p>
-              <p className="text-sm text-gray-600">파일 업로드가 완료되면 알림</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="font-medium text-gray-900">AI 분석 완료</p>
-              <p className="text-sm text-gray-600">문서 분석이 완료되면 알림</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="font-medium text-gray-900">승인 요청</p>
-              <p className="text-sm text-gray-600">승인이 필요한 문서가 있을 때 알림</p>
-            </div>
-            <Switch />
-          </div>
-        </div>
+      <Card>
+        <SectionHeader type="notify" title="알림 설정" desc="받고 싶은 알림을 선택하세요" />
+        <ToggleRow label="문서 업로드 완료" desc="파일 업로드가 완료되면 알림" defaultChecked />
+        <Divider />
+        <ToggleRow label="AI 분석 완료" desc="문서 분석이 완료되면 알림" defaultChecked />
+        <Divider />
+        <ToggleRow label="승인 요청" desc="승인이 필요한 문서가 있을 때 알림" />
       </Card>
 
       {/* 보안 설정 */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-            <Lock className="w-6 h-6 text-red-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">보안 설정</h3>
-            <p className="text-sm text-gray-600">데이터 보안 및 접근 제어</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="font-medium text-gray-900">2단계 인증</p>
-              <p className="text-sm text-gray-600">추가 보안 레이어 활성화</p>
-            </div>
-            <Switch />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="font-medium text-gray-900">자동 로그아웃</p>
-              <p className="text-sm text-gray-600">30분 비활성 시 자동 로그아웃</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-        </div>
+      <Card>
+        <SectionHeader type="security" title="보안 설정" desc="데이터 보안 및 접근 제어" />
+        <ToggleRow label="2단계 인증" desc="추가 보안 레이어 활성화" />
+        <Divider />
+        <ToggleRow label="자동 로그아웃" desc="30분 비활성 시 자동 로그아웃" defaultChecked />
       </Card>
 
       {/* 저장 버튼 */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white" size="lg">
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={handleSave}
+          style={{
+            height: 38, padding: '0 20px',
+            background: '#5E6AD2', color: '#fff',
+            border: 'none', borderRadius: 9, cursor: 'pointer',
+            fontSize: 13, fontWeight: 600,
+            boxShadow: '0 2px 8px rgba(94,106,210,0.35)',
+            transition: 'opacity 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
           설정 저장
-        </Button>
-      </div>
+        </button>
       </div>
     </div>
   )

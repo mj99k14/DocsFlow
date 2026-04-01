@@ -2,13 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Department
-from schemas import DepartmentResponse, DepartmentUpdate
+from schemas import DepartmentResponse, DepartmentUpdate, DepartmentCreate
 
 router = APIRouter(prefix="/departments", tags=["departments"])
 
 @router.get("/", response_model=list[DepartmentResponse])
 def get_departments(db: Session = Depends(get_db)):
     return db.query(Department).all()
+
+
+@router.post("/", response_model=DepartmentResponse)
+def create_department(data: DepartmentCreate, db: Session = Depends(get_db)):
+    dept = Department(name=data.name, slack_channel=data.slack_channel)
+    db.add(dept)
+    db.commit()
+    db.refresh(dept)
+    return dept
 
 
 @router.put("/{dept_id}", response_model=DepartmentResponse)

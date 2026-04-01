@@ -107,3 +107,7 @@ class DocumentDetailResponse(BaseModel):
 
 class DepartmentUpdate(BaseModel):
     slack_channel: Optional[str] = None
+
+class DepartmentCreate(BaseModel):
+    name: str
+    slack_channel: Optional[str] = None
