@@ -12,18 +12,25 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false)
   const navigate = useNavigate()
 
+  const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+
   const addFiles = (newFiles) => {
     const pdfs = Array.from(newFiles).filter(f => f.name.endsWith('.pdf'))
     if (pdfs.length < Array.from(newFiles).length) {
       toast.error('PDF 파일만 업로드 가능합니다')
     }
+    const oversized = pdfs.filter(f => f.size > MAX_SIZE)
+    if (oversized.length > 0) {
+      toast.error(`10MB를 초과한 파일은 업로드할 수 없습니다: ${oversized.map(f => f.name).join(', ')}`)
+    }
+    const validPdfs = pdfs.filter(f => f.size <= MAX_SIZE)
     setFiles(prev => {
       const existingNames = new Set(prev.map(f => f.name))
-      const duplicates = pdfs.filter(f => existingNames.has(f.name))
+      const duplicates = validPdfs.filter(f => existingNames.has(f.name))
       if (duplicates.length > 0) {
         toast.error(`이미 추가된 파일입니다: ${duplicates.map(f => f.name).join(', ')}`)
       }
-      return [...prev, ...pdfs.filter(f => !existingNames.has(f.name))]
+      return [...prev, ...validPdfs.filter(f => !existingNames.has(f.name))]
     })
   }
 

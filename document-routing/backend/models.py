@@ -62,6 +62,7 @@ class Department(Base):
     id            = Column(Integer, primary_key=True, index=True)
     name          = Column(String(100), nullable=False)   # 부서 이름
     slack_channel = Column(String(100))                   # Slack 채널
+    webhook_url   = Column(String(500))                   # Slack Webhook URL
 
     # 관계
     document_departments = relationship("DocumentDepartment", back_populates="department")

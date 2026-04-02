@@ -32,6 +32,7 @@ export default function DocumentDetail() {
   const [history, setHistory] = useState([])
   const [deptMap, setDeptMap] = useState({})
   const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(null)
 
   useEffect(() => {
     Promise.all([getDocument(id), getDocumentHistory(id), getDepartments()])
@@ -62,6 +63,23 @@ export default function DocumentDetail() {
       </div>
     </div>
   )
+
+  const handleAction = async (action) => {
+    if (isProcessed || actionLoading) return
+    setActionLoading(action)
+    try {
+      await approveDocument(doc.id, { action, approved_by: '관리자' })
+      setDoc(prev => ({ ...prev, status: action }))
+      const h = await getDocumentHistory(id)
+      setHistory(h)
+      const labels = { APPROVED: '승인', REJECTED: '반려', HELD: '보류' }
+      toast.success(`${labels[action]}되었습니다!`)
+    } catch {
+      toast.error('처리 중 오류가 발생했습니다.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   const conf = doc.analysis?.departments?.[0]?.confidence || 0
   const deptId = doc.analysis?.departments?.[0]?.department_id
@@ -283,26 +301,37 @@ export default function DocumentDetail() {
                 승인 시 해당 부서의 슬랙 채널로 문서 분석 결과와 함께 알림이 전송됩니다.
               </p>
 
-              <Button
-                size="lg"
-                className="w-full gap-2"
-                disabled={isProcessed}
-                style={{
-                  background: isProcessed ? '#E5E7EB' : '#5E6AD2',
-                  color: isProcessed ? '#9CA3AF' : '#fff',
-                  fontSize: 14,
-                  cursor: isProcessed ? 'not-allowed' : 'pointer',
-                }}
-                onClick={async () =>{
-                  if (isProcessed) return
-                  await approveDocument(doc.id,{action:'APPROVED',approved_by:'관리자'})
-                  setDoc(prev => ({ ...prev, status: 'APPROVED' }))
-                  toast.success('승인되었습니다!')
-                }}
-              >
-                <CheckCircle size={16} />
-                {isProcessed ? '처리 완료' : 'Approve & Send to Slack'}
-              </Button>
+              {isProcessed ? (
+                <div style={{ padding: '12px 16px', background: '#F9FAFB', borderRadius: 10, textAlign: 'center' }}>
+                  <p style={{ fontSize: 13, color: '#9CA3AF' }}>이미 처리된 문서입니다</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[
+                    { action: 'APPROVED', label: '승인', Icon: CheckCircle, bg: '#059669', hoverBg: '#047857' },
+                    { action: 'REJECTED', label: '반려', Icon: XCircle,     bg: '#DC2626', hoverBg: '#B91C1C' },
+                    { action: 'HELD',     label: '보류', Icon: PauseCircle, bg: '#7C3AED', hoverBg: '#6D28D9' },
+                  ].map(({ action, label, Icon, bg }) => (
+                    <Button
+                      key={action}
+                      size="sm"
+                      disabled={actionLoading !== null}
+                      style={{
+                        flex: 1,
+                        gap: 4,
+                        background: actionLoading !== null ? '#E5E7EB' : bg,
+                        color: actionLoading !== null ? '#9CA3AF' : '#fff',
+                        fontSize: 13,
+                        cursor: actionLoading !== null ? 'not-allowed' : 'pointer',
+                      }}
+                      onClick={() => handleAction(action)}
+                    >
+                      <Icon size={14} />
+                      {actionLoading === action ? '처리중...' : label}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </Card>
           </div>
         </div>

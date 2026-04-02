@@ -68,7 +68,8 @@ def process_document(document_id: int, file_path: str):
         db.commit()
 
         #7. Slack 알림 전송
-        send_slack_notification(document_id,document.file_name,ai_result)
+        webhook_url = department.webhook_url if department else None
+        send_slack_notification(document_id, document.file_name, ai_result, webhook_url=webhook_url)
 
         print(f" 문서 {document_id} 분석 완료: {department_name} ({confidence})")
 
@@ -208,7 +209,8 @@ def approve_document(
                 "confidence":    doc_dept.confidence if doc_dept else 0.0,
             }
             try:
-               send_approved_notification(document_id, document.file_name, dept_name, data.approved_by)
+               webhook_url = dept.webhook_url if dept else None
+               send_approved_notification(document_id, document.file_name, dept_name, data.approved_by, webhook_url=webhook_url)
             except Exception as e:
                 print(f" Slack 알림 전송 실패: {str(e)}")
 

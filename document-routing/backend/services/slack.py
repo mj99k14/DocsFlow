@@ -4,20 +4,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 부서별 Webhook URL
-WEBHOOK_URLS = {
-    "법무팀":    os.getenv("SLACK_WEBHOOK_LEGAL"),
-    "재무팀":    os.getenv("SLACK_WEBHOOK_FINANCE"),
-    "인사팀":    os.getenv("SLACK_WEBHOOK_HR"),
-    "경영기획팀": os.getenv("SLACK_WEBHOOK_PLANNING"),
-}
-
 # 관리자 채널 Webhook URL
 WEBHOOK_ADMIN = os.getenv("SLACK_WEBHOOK_REJECT")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 
-def send_slack_notification(document_id: int, file_name: str, ai_result: dict):
+def send_slack_notification(document_id: int, file_name: str, ai_result: dict, webhook_url: str = None):
     """
     AI 분석 결과를 Slack으로 전송
     승인 / 반려 / 보류 버튼 포함
@@ -100,10 +92,6 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict):
             }
         ]
     }
-
-    webhook_url = WEBHOOK_URLS.get(department)   
-    if not webhook_url:
-        webhook_url = WEBHOOK_URLS.get("경영기획팀")
 
     if not webhook_url:
         raise Exception("Slack Webhook URL이 설정되지 않았습니다")
@@ -228,9 +216,8 @@ def update_slack_message(response_url: str, action_type: str, user_name: str):
         print(f" Slack 메시지 업데이트 실패: {response.status_code} {response.text}")
 
 
-def send_approved_notification(document_id: int, file_name: str, dept_name: str, approved_by: str):
+def send_approved_notification(document_id: int, file_name: str, dept_name: str, approved_by: str, webhook_url: str = None):
     """웹에서 승인 시 해당 부서 채널로 승인 완료 알림 전송 (버튼 없음)"""
-    webhook_url = WEBHOOK_URLS.get(dept_name) or WEBHOOK_URLS.get("경영기획팀")
     if not webhook_url:
         raise Exception("Slack Webhook URL이 설정되지 않았습니다")
 

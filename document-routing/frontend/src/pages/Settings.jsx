@@ -42,15 +42,6 @@ function Card({ children, style }) {
   )
 }
 
-function FieldRow({ label, hint, children }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{label}</label>
-      {children}
-      {hint && <span style={{ fontSize: 11, color: '#9CA3AF' }}>{hint}</span>}
-    </div>
-  )
-}
 
 function StyledInput({ value, onChange, placeholder, style, autoFocus, onKeyDown }) {
   return (
@@ -110,29 +101,28 @@ function Divider() {
 export default function Settings() {
   const [departments, setDepartments] = useState([])
   const [editingIndex, setEditingIndex] = useState(null)
-  const [webhookUrl, setWebhookUrl] = useState('')
-  const [defaultChannel, setDefaultChannel] = useState('')
   const [addingDept, setAddingDept] = useState(false)
-  const [newDept, setNewDept] = useState({ name: '', slack_channel: '' })
+  const [newDept, setNewDept] = useState({ name: '', slack_channel: '', webhook_url: '' })
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error)
-    setWebhookUrl(localStorage.getItem('slack_webhook_url') || '')
-    setDefaultChannel(localStorage.getItem('slack_default_channel') || '')
   }, [])
 
-  const handleSlackChannelChange = (index, value) => {
+  const handleFieldChange = (index, field, value) => {
     const updated = [...departments]
-    updated[index].slack_channel = value
+    updated[index][field] = value
     setDepartments(updated)
   }
 
   const handleSaveEdit = async (dept) => {
     try {
-      const updated = await updateDepartment(dept.id, { slack_channel: dept.slack_channel })
+      const updated = await updateDepartment(dept.id, {
+        slack_channel: dept.slack_channel,
+        webhook_url: dept.webhook_url,
+      })
       setDepartments(prev => prev.map(d => d.id === updated.id ? updated : d))
       setEditingIndex(null)
-      toast.success('Slack 채널이 업데이트되었습니다!')
+      toast.success('부서 정보가 업데이트되었습니다!')
     } catch (e) {
       toast.error('저장 실패: ' + e.message)
     }
@@ -143,18 +133,12 @@ export default function Settings() {
     try {
       const created = await createDepartment(newDept)
       setDepartments(prev => [...prev, created])
-      setNewDept({ name: '', slack_channel: '' })
+      setNewDept({ name: '', slack_channel: '', webhook_url: '' })
       setAddingDept(false)
       toast.success('부서가 추가되었습니다!')
     } catch (e) {
       toast.error('추가 실패: ' + e.message)
     }
-  }
-
-  const handleSave = () => {
-    localStorage.setItem('slack_webhook_url', webhookUrl)
-    localStorage.setItem('slack_default_channel', defaultChannel)
-    toast.success('설정이 저장되었습니다!')
   }
 
   return (
@@ -169,24 +153,10 @@ export default function Settings() {
       {/* Slack 연동 */}
       <Card>
         <SectionHeader type="slack" title="Slack 연동" desc="워크스페이스와 연결하여 알림을 받으세요" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <FieldRow label="Webhook URL" hint="Slack 워크스페이스의 Incoming Webhook URL을 입력하세요">
-            <StyledInput
-              value={webhookUrl}
-              onChange={e => setWebhookUrl(e.target.value)}
-              placeholder="https://hooks.slack.com/services/..."
-            />
-          </FieldRow>
-          <FieldRow label="기본 채널">
-            <StyledInput
-              value={defaultChannel}
-              onChange={e => setDefaultChannel(e.target.value)}
-              placeholder="#general"
-              style={{ maxWidth: 220 }}
-            />
-          </FieldRow>
-          <Divider />
-          <ToggleRow label="실시간 알림" desc="문서 업로드 시 즉시 알림 전송" defaultChecked />
+        <div style={{ padding: '12px 16px', background: '#F0F4FF', borderRadius: 8, border: '1px solid #E0E7FF' }}>
+          <p style={{ fontSize: 13, color: '#4338CA' }}>
+            각 부서의 Webhook URL은 아래 <strong>부서 관리</strong> 테이블에서 부서별로 설정하세요.
+          </p>
         </div>
       </Card>
 
@@ -197,11 +167,11 @@ export default function Settings() {
         <div style={{ border: '1px solid #F3F4F6', borderRadius: 8, overflow: 'hidden' }}>
           {/* 테이블 헤더 */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr 80px',
+            display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 80px',
             background: '#FAFAFA', padding: '8px 16px',
             borderBottom: '1px solid #F3F4F6',
           }}>
-            {['부서명', 'Slack 채널', ''].map((h, i) => (
+            {['부서명', 'Slack 채널', 'Webhook URL', ''].map((h, i) => (
               <span key={i} style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
             ))}
           </div>
@@ -211,7 +181,7 @@ export default function Settings() {
             <div
               key={dept.id}
               style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr 80px',
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 80px',
                 alignItems: 'center', padding: '10px 16px',
                 borderBottom: index < departments.length - 1 ? '1px solid #F9FAFB' : 'none',
                 background: editingIndex === index ? '#FAFBFF' : '#fff',
@@ -226,7 +196,7 @@ export default function Settings() {
                 {editingIndex === index ? (
                   <StyledInput
                     value={dept.slack_channel || ''}
-                    onChange={e => handleSlackChannelChange(index, e.target.value)}
+                    onChange={e => handleFieldChange(index, 'slack_channel', e.target.value)}
                     placeholder="#channel-name"
                     autoFocus
                     onKeyDown={e => {
@@ -242,6 +212,31 @@ export default function Settings() {
                     padding: '3px 8px', borderRadius: 5,
                   }}>
                     {dept.slack_channel || '미설정'}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                {editingIndex === index ? (
+                  <StyledInput
+                    value={dept.webhook_url || ''}
+                    onChange={e => handleFieldChange(index, 'webhook_url', e.target.value)}
+                    placeholder="https://hooks.slack.com/..."
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleSaveEdit(dept)
+                      if (e.key === 'Escape') setEditingIndex(null)
+                    }}
+                  />
+                ) : (
+                  <span style={{
+                    fontSize: 12, fontFamily: 'monospace',
+                    background: dept.webhook_url ? '#ECFDF5' : '#F3F4F6',
+                    color: dept.webhook_url ? '#059669' : '#9CA3AF',
+                    padding: '3px 8px', borderRadius: 5,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    display: 'block', maxWidth: '90%',
+                  }}>
+                    {dept.webhook_url ? '설정됨' : '미설정'}
                   </span>
                 )}
               </div>
@@ -277,7 +272,7 @@ export default function Settings() {
           {/* 새 부서 추가 행 */}
           {addingDept && (
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr 80px',
+              display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 80px',
               alignItems: 'center', padding: '10px 16px',
               borderTop: '1px solid #EEF0FF', background: '#FAFBFF',
             }}>
@@ -293,6 +288,14 @@ export default function Settings() {
                   value={newDept.slack_channel}
                   onChange={e => setNewDept(prev => ({ ...prev, slack_channel: e.target.value }))}
                   placeholder="#channel-name"
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddDept(); if (e.key === 'Escape') setAddingDept(false) }}
+                />
+              </div>
+              <div style={{ paddingLeft: 8 }}>
+                <StyledInput
+                  value={newDept.webhook_url}
+                  onChange={e => setNewDept(prev => ({ ...prev, webhook_url: e.target.value }))}
+                  placeholder="https://hooks.slack.com/..."
                   onKeyDown={e => { if (e.key === 'Enter') handleAddDept(); if (e.key === 'Escape') setAddingDept(false) }}
                 />
               </div>
@@ -352,24 +355,6 @@ export default function Settings() {
         <ToggleRow label="자동 로그아웃" desc="30분 비활성 시 자동 로그아웃" defaultChecked />
       </Card>
 
-      {/* 저장 버튼 */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          onClick={handleSave}
-          style={{
-            height: 38, padding: '0 20px',
-            background: '#5E6AD2', color: '#fff',
-            border: 'none', borderRadius: 9, cursor: 'pointer',
-            fontSize: 13, fontWeight: 600,
-            boxShadow: '0 2px 8px rgba(94,106,210,0.35)',
-            transition: 'opacity 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-        >
-          설정 저장
-        </button>
-      </div>
     </div>
   )
 }
