@@ -6,7 +6,7 @@
 
 - [x] 반려/보류 버튼 추가 — DocumentDetail에 승인 버튼 옆에 반려·보류 버튼 추가
 - [x] 10MB 파일 크기 제한 — Upload.jsx `addFiles`에 size 체크 추가
-- [ ] Slack Webhook URL 관리 UI — 설정 페이지에서 URL 저장 시 실제 백엔드 반영
+- [x] Slack Webhook URL 관리 UI — 설정 페이지에서 URL 저장 시 실제 백엔드 반영
 
 ---
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { MessageSquare, Bell, Lock, Building2, Edit2, Check, X, Plus } from 'lucide-react'
-import { getDepartments, updateDepartment, createDepartment } from '../services/api.js'
+import { MessageSquare, Bell, Lock, Building2, Edit2, Check, X, Plus, ShieldCheck } from 'lucide-react'
+import { getDepartments, updateDepartment, createDepartment, verifyAdminPin } from '../services/api.js'
 import { toast } from 'sonner'
 
 const SECTION_ICONS = {
@@ -99,6 +99,9 @@ function Divider() {
 }
 
 export default function Settings() {
+  const [adminVerified, setAdminVerified] = useState(() => sessionStorage.getItem('admin_verified') === 'true')
+  const [pin, setPin] = useState('')
+  const [pinLoading, setPinLoading] = useState(false)
   const [departments, setDepartments] = useState([])
   const [editingIndex, setEditingIndex] = useState(null)
   const [addingDept, setAddingDept] = useState(false)
@@ -107,6 +110,70 @@ export default function Settings() {
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error)
   }, [])
+
+  const handleVerifyPin = async () => {
+    if (!pin.trim()) return
+    setPinLoading(true)
+    try {
+      await verifyAdminPin(pin)
+      sessionStorage.setItem('admin_verified', 'true')
+      setAdminVerified(true)
+      toast.success('관리자 인증 완료!')
+    } catch {
+      toast.error('PIN이 올바르지 않습니다')
+    } finally {
+      setPinLoading(false)
+    }
+  }
+
+  if (!adminVerified) {
+    return (
+      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          background: '#fff', borderRadius: 16, padding: 36, width: 340,
+          border: '1px solid #EBEBEB', boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 14, background: '#EEF0FF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+          }}>
+            <ShieldCheck size={22} color="#5E6AD2" />
+          </div>
+          <p style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>관리자 인증</p>
+          <p style={{ fontSize: 13, color: '#9CA3AF', marginBottom: 24 }}>설정 페이지는 관리자만 접근할 수 있습니다</p>
+          <input
+            autoFocus
+            type="password"
+            value={pin}
+            onChange={e => setPin(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleVerifyPin()}
+            placeholder="PIN 입력"
+            style={{
+              width: '100%', height: 40, padding: '0 12px',
+              border: '1px solid #EBEBEB', borderRadius: 8,
+              fontSize: 14, color: '#111827', outline: 'none',
+              boxSizing: 'border-box', marginBottom: 12, textAlign: 'center',
+              letterSpacing: '0.2em',
+            }}
+          />
+          <button
+            onClick={handleVerifyPin}
+            disabled={!pin.trim() || pinLoading}
+            style={{
+              width: '100%', height: 40, border: 'none', borderRadius: 8,
+              background: pin.trim() ? '#5E6AD2' : '#E5E7EB',
+              color: pin.trim() ? '#fff' : '#9CA3AF',
+              cursor: pin.trim() ? 'pointer' : 'not-allowed',
+              fontSize: 14, fontWeight: 600,
+            }}
+          >
+            {pinLoading ? '확인 중...' : '확인'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const handleFieldChange = (index, field, value) => {
     const updated = [...departments]

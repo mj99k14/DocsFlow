@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  
 from database import engine
 import models
-from routers import documents, slack, departments
+from routers import documents, slack, departments, admin
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -19,6 +19,7 @@ app.add_middleware(
 app.include_router(documents.router)
 app.include_router(slack.router)
 app.include_router(departments.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def root():

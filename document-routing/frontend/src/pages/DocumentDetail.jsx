@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Send, Clock } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock } from 'lucide-react'
 import { getDocument, getDocumentHistory, getDepartments, getFileUrl } from '../services/api.js'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { toast } from 'sonner'
-import { approveDocument } from '../services/api.js'
 
 const STATUS_BADGE = {
   PENDING:   { label: '대기중',    className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
@@ -32,7 +30,6 @@ export default function DocumentDetail() {
   const [history, setHistory] = useState([])
   const [deptMap, setDeptMap] = useState({})
   const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(null)
 
   useEffect(() => {
     Promise.all([getDocument(id), getDocumentHistory(id), getDepartments()])
@@ -64,29 +61,10 @@ export default function DocumentDetail() {
     </div>
   )
 
-  const handleAction = async (action) => {
-    if (isProcessed || actionLoading) return
-    setActionLoading(action)
-    try {
-      await approveDocument(doc.id, { action, approved_by: '관리자' })
-      setDoc(prev => ({ ...prev, status: action }))
-      const h = await getDocumentHistory(id)
-      setHistory(h)
-      const labels = { APPROVED: '승인', REJECTED: '반려', HELD: '보류' }
-      toast.success(`${labels[action]}되었습니다!`)
-    } catch {
-      toast.error('처리 중 오류가 발생했습니다.')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
   const conf = doc.analysis?.departments?.[0]?.confidence || 0
   const deptId = doc.analysis?.departments?.[0]?.department_id
   const deptName = deptMap[deptId] || '미확인'
   const badge = STATUS_BADGE[doc.status] || STATUS_BADGE.PENDING
-  const isProcessed = ['APPROVED', 'REJECTED', 'HELD'].includes(doc.status)
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
@@ -285,57 +263,10 @@ export default function DocumentDetail() {
               </Card>
             )}
 
-            {/* Slack 전송 */}
-            <Card style={{ padding: 28, background: 'linear-gradient(145deg, #F0F4FF, #fff)', border: '1px solid #E0E7FF' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#EEF0FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Send size={16} color="#5E6AD2" />
-                </div>
-                <div>
-                  <p style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>슬랙 알림 전송</p>
-                  <p style={{ fontSize: 12, color: '#9CA3AF' }}>#{deptName} 채널</p>
-                </div>
-              </div>
-
-              <p style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.7, marginBottom: 20 }}>
-                승인 시 해당 부서의 슬랙 채널로 문서 분석 결과와 함께 알림이 전송됩니다.
-              </p>
-
-              {isProcessed ? (
-                <div style={{ padding: '12px 16px', background: '#F9FAFB', borderRadius: 10, textAlign: 'center' }}>
-                  <p style={{ fontSize: 13, color: '#9CA3AF' }}>이미 처리된 문서입니다</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[
-                    { action: 'APPROVED', label: '승인', Icon: CheckCircle, bg: '#059669', hoverBg: '#047857' },
-                    { action: 'REJECTED', label: '반려', Icon: XCircle,     bg: '#DC2626', hoverBg: '#B91C1C' },
-                    { action: 'HELD',     label: '보류', Icon: PauseCircle, bg: '#7C3AED', hoverBg: '#6D28D9' },
-                  ].map(({ action, label, Icon, bg }) => (
-                    <Button
-                      key={action}
-                      size="sm"
-                      disabled={actionLoading !== null}
-                      style={{
-                        flex: 1,
-                        gap: 4,
-                        background: actionLoading !== null ? '#E5E7EB' : bg,
-                        color: actionLoading !== null ? '#9CA3AF' : '#fff',
-                        fontSize: 13,
-                        cursor: actionLoading !== null ? 'not-allowed' : 'pointer',
-                      }}
-                      onClick={() => handleAction(action)}
-                    >
-                      <Icon size={14} />
-                      {actionLoading === action ? '처리중...' : label}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </Card>
           </div>
         </div>
       </div>
     </div>
+
   )
 }
