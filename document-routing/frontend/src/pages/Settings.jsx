@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck } from 'lucide-react'
-import { getDepartments, updateDepartment, createDepartment, verifyAdminPin } from '../services/api.js'
+import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck, Sparkles, BarChart2 } from 'lucide-react'
+import { getDepartments, updateDepartment, createDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals } from '../services/api.js'
 import { toast } from 'sonner'
 
 const SECTION_ICONS = {
   slack: { bg: '#EEF0FF', color: '#5E6AD2', Icon: MessageSquare },
   dept:  { bg: '#EFF6FF', color: '#3B82F6', Icon: Building2 },
+  ai:    { bg: '#FDF4FF', color: '#9333EA', Icon: Sparkles },
+  stats: { bg: '#FFF7ED', color: '#EA580C', Icon: BarChart2 },
 }
 
 function SectionHeader({ type, title, desc }) {
@@ -74,10 +76,31 @@ export default function Settings() {
   const [editingIndex, setEditingIndex] = useState(null)
   const [addingDept, setAddingDept] = useState(false)
   const [newDept, setNewDept] = useState({ name: '', slack_channel: '', webhook_url: '' })
+  const [threshold, setThreshold] = useState(0)
+  const [thresholdSaving, setThresholdSaving] = useState(false)
+  const [stats, setStats] = useState(null)
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error)
   }, [])
+
+  useEffect(() => {
+    if (!adminVerified || !verifiedPin) return
+    getAdminSettings(verifiedPin).then(s => setThreshold(Math.round(s.confidence_threshold * 100))).catch(console.error)
+    getAdminStats(verifiedPin).then(setStats).catch(console.error)
+  }, [adminVerified, verifiedPin])
+
+  const handleSaveThreshold = async () => {
+    setThresholdSaving(true)
+    try {
+      await updateAdminSettings({ confidence_threshold: threshold / 100 }, verifiedPin)
+      toast.success('신뢰도 임계값이 저장되었습니다!')
+    } catch {
+      toast.error('저장 실패')
+    } finally {
+      setThresholdSaving(false)
+    }
+  }
 
   const handleVerifyPin = async () => {
     if (!pin.trim()) return
@@ -370,6 +393,86 @@ export default function Settings() {
             새 부서 추가
           </button>
         )}
+      </Card>
+
+      {/* AI 설정 */}
+      <Card>
+        <SectionHeader type="ai" title="AI 설정" desc="신뢰도 임계값 미만이면 관리자 채널로 전송됩니다" />
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>신뢰도 임계값</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: threshold === 0 ? '#9CA3AF' : '#9333EA' }}>
+              {threshold === 0 ? '비활성' : `${threshold}%`}
+            </span>
+          </div>
+          <input
+            type="range" min={0} max={100} step={5}
+            value={threshold}
+            onChange={e => setThreshold(Number(e.target.value))}
+            style={{ width: '100%', accentColor: '#9333EA' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+            <span style={{ fontSize: 11, color: '#9CA3AF' }}>0% (비활성)</span>
+            <span style={{ fontSize: 11, color: '#9CA3AF' }}>100%</span>
+          </div>
+        </div>
+        {threshold > 0 && (
+          <div style={{ padding: '10px 14px', background: '#FDF4FF', borderRadius: 8, marginBottom: 14 }}>
+            <p style={{ fontSize: 12, color: '#9333EA' }}>
+              신뢰도 <strong>{threshold}%</strong> 미만 문서는 부서 대신 관리자 채널로 전송됩니다
+            </p>
+          </div>
+        )}
+        <button
+          onClick={handleSaveThreshold}
+          disabled={thresholdSaving}
+          style={{
+            height: 36, padding: '0 20px', border: 'none', borderRadius: 8,
+            background: '#9333EA', color: '#fff', fontSize: 13, fontWeight: 600,
+            cursor: thresholdSaving ? 'not-allowed' : 'pointer', opacity: thresholdSaving ? 0.7 : 1,
+          }}
+        >
+          {thresholdSaving ? '저장 중...' : '저장'}
+        </button>
+      </Card>
+
+      {/* 시스템 현황 */}
+      <Card>
+        <SectionHeader type="stats" title="시스템 현황" desc="문서 처리 통계 (읽기 전용)" />
+        {stats ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {[
+              { label: '전체 문서', value: stats.total, color: '#111827' },
+              { label: '승인', value: stats.approved, color: '#059669' },
+              { label: '반려', value: stats.rejected, color: '#DC2626' },
+              { label: '보류', value: stats.held, color: '#7C3AED' },
+              { label: '처리 대기', value: stats.pending, color: '#5E6AD2' },
+              { label: '승인율', value: `${stats.approval_rate}%`, color: '#EA580C' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{
+                padding: '14px 16px', background: '#FAFAFA',
+                borderRadius: 10, border: '1px solid #F3F4F6', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: 13 }}>
+            통계를 불러오는 중...
+          </div>
+        )}
+        <button
+          onClick={() => exportApprovals(verifiedPin).catch(() => toast.error('내보내기 실패'))}
+          style={{
+            marginTop: 16, height: 36, padding: '0 20px', border: '1px solid #E5E7EB',
+            borderRadius: 8, background: '#fff', color: '#374151',
+            fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}
+        >
+          ↓ 승인 내역 CSV 다운로드
+        </button>
       </Card>
 
     </div>

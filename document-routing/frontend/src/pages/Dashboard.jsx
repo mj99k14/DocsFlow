@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [searchText, setSearchText] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [filterDept, setFilterDept] = useState('ALL')
+  const [hideApproved, setHideApproved] = useState(true)
   const navigate = useNavigate()
   const pollingRef = useRef(null)
 
@@ -49,7 +50,8 @@ export default function Dashboard() {
     const matchSearch = doc.file_name.toLowerCase().includes(searchText.toLowerCase())
     const matchStatus = filterStatus === 'ALL' || doc.status === filterStatus
     const matchDept = filterDept === 'ALL' || deptName === filterDept
-    return matchSearch && matchStatus && matchDept
+    const matchHide = !hideApproved || doc.status !== 'APPROVED'
+    return matchSearch && matchStatus && matchDept && matchHide
   })
 
   const analyzed = documents.filter(d => d.analysis?.departments?.[0]?.confidence)
@@ -174,6 +176,20 @@ export default function Dashboard() {
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
+            {/* 승인 완료 숨김 토글 */}
+            <button
+              onClick={() => setHideApproved(v => !v)}
+              style={{
+                height: 34, padding: '0 12px', borderRadius: 8, fontSize: 13, cursor: 'pointer',
+                border: `1px solid ${hideApproved ? '#5E6AD2' : '#E5E7EB'}`,
+                background: hideApproved ? '#EEF0FF' : '#FAFAFA',
+                color: hideApproved ? '#5E6AD2' : '#6B7280',
+                fontWeight: hideApproved ? 600 : 400,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {hideApproved ? '✓ 승인 완료 숨김' : '승인 완료 숨김'}
+            </button>
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import os
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, selectinload
 from database import get_db
-from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType, ApprovalHistory
+from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType, ApprovalHistory, SystemSettings
 from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse, ApprovalResponse
 from services.pdf import extract_text_from_pdf
 from services.ai import analyze_document
@@ -67,9 +67,17 @@ def process_document(document_id: int, file_path: str):
         document.status = StatusType.COMPLETED
         db.commit()
 
-        #7. Slack 알림 전송
-        webhook_url = department.webhook_url if department else None
-        send_slack_notification(document_id, document.file_name, ai_result, webhook_url=webhook_url)
+        # 7. 신뢰도 임계값 체크 → 미달 시 관리자 채널로 전송
+        settings = db.query(SystemSettings).first()
+        threshold = settings.confidence_threshold if settings else 0.0
+
+        if threshold > 0.0 and confidence < threshold:
+            from services.slack import send_rejected_notification
+            print(f" 신뢰도 {int(confidence*100)}% < 임계값 {int(threshold*100)}% → 관리자 채널로 전송")
+            send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", department_name)
+        else:
+            webhook_url = department.webhook_url if department else None
+            send_slack_notification(document_id, document.file_name, ai_result, webhook_url=webhook_url)
 
         print(f" 문서 {document_id} 분석 완료: {department_name} ({confidence})")
 

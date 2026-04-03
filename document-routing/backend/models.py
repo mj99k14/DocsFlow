@@ -2,7 +2,10 @@ import enum
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, Enum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
+
+def utcnow():
+    return datetime.now(timezone.utc)
 from database import Base
 
 
@@ -31,11 +34,11 @@ class Document(Base):
     file_name  = Column(String(255), nullable=False)        # 파일 이름
     file_path  = Column(String(500), nullable=False)        # 저장 경로
     status     = Column(Enum(StatusType), default=StatusType.PENDING)  # 현재 상태
-    created_at = Column(DateTime, default=datetime.utcnow)  # 업로드 시간
+    created_at = Column(DateTime, default=utcnow)  # 업로드 시간
 
     # 관계
-    analysis = relationship("AnalysisResult", back_populates="document", uselist=False)
-    approvals = relationship("ApprovalHistory", back_populates="document")
+    analysis = relationship("AnalysisResult", back_populates="document", uselist=False, cascade="all, delete-orphan")
+    approvals = relationship("ApprovalHistory", back_populates="document", cascade="all, delete-orphan")
 
 
 # ── 2. analysis_results (AI 분석 결과) ──────────────────────
@@ -48,7 +51,7 @@ class AnalysisResult(Base):
     summary       = Column(Text)         # 문서 요약
     keywords      = Column(JSONB)        # 키워드 ["계약", "법무"]
     reasoning     = Column(Text)         # AI 판단 근거
-    created_at    = Column(DateTime, default=datetime.utcnow)  # 분석 시간
+    created_at    = Column(DateTime, default=utcnow)  # 분석 시간
 
     # 관계
     document    = relationship("Document", back_populates="analysis")
@@ -91,7 +94,15 @@ class ApprovalHistory(Base):
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)  # 문서 Id
     action      = Column(Enum(ActionType), nullable=False)   # 승인/반려
     approved_by = Column(String(100))                        # 승인자 (Slack 유저)
-    created_at  = Column(DateTime, default=datetime.utcnow) # 승인 시간
+    created_at  = Column(DateTime, default=utcnow) # 승인 시간
 
     # 관계
     document = relationship("Document", back_populates="approvals")
+
+
+# ── 6. system_settings (시스템 설정) ─────────────────────────
+class SystemSettings(Base):
+    __tablename__ = "system_settings"
+
+    id                   = Column(Integer, primary_key=True, index=True)
+    confidence_threshold = Column(Float, default=0.0)  # 신뢰도 임계값 (0.0 = 비활성)

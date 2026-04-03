@@ -10,6 +10,28 @@ export const getDepartments = () => axios.get(`${API_URL}/departments/`).then(r 
 export const verifyAdminPin = (pin) =>
   axios.post(`${API_URL}/admin/verify`, { pin }).then(r => r.data)
 
+export const getAdminSettings = (pin) =>
+  axios.get(`${API_URL}/admin/settings`, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
+
+export const updateAdminSettings = (data, pin) =>
+  axios.patch(`${API_URL}/admin/settings`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
+
+export const getAdminStats = (pin) =>
+  axios.get(`${API_URL}/admin/stats`, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
+
+export const exportApprovals = (pin) =>
+  axios.get(`${API_URL}/admin/export/approvals`, {
+    headers: { 'x-admin-pin': pin },
+    responseType: 'blob',
+  }).then(r => {
+    const url = URL.createObjectURL(r.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'approval_history.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  })
+
 export const updateDepartment = (id, data, pin) => axios.put(`${API_URL}/departments/${id}`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const createDepartment = (data, pin) => axios.post(`${API_URL}/departments/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
