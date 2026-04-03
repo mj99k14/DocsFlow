@@ -5,9 +5,8 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from database import get_db
-from models import SystemSettings, Document, StatusType, ActionType, ApprovalHistory
+from models import SystemSettings, Document, StatusType, ApprovalHistory
 from dotenv import load_dotenv
 
 load_dotenv()

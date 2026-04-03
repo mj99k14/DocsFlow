@@ -208,14 +208,6 @@ def approve_document(
             if doc_dept:
                 dept = db.query(Department).filter(Department.id == doc_dept.department_id).first()
                 dept_name = dept.name if dept else ""
-            ai_result = {
-                "department":    dept_name,
-                "document_type": analysis.document_type,
-                "summary":       analysis.summary,
-                "keywords":      analysis.keywords,
-                "reasoning":     analysis.reasoning,
-                "confidence":    doc_dept.confidence if doc_dept else 0.0,
-            }
             try:
                webhook_url = dept.webhook_url if dept else None
                send_approved_notification(document_id, document.file_name, dept_name, data.approved_by, webhook_url=webhook_url)
@@ -223,5 +215,3 @@ def approve_document(
                 print(f" Slack 알림 전송 실패: {str(e)}")
 
     return approval
-    
-    

@@ -35,7 +35,6 @@ export const exportApprovals = (pin) =>
 export const updateDepartment = (id, data, pin) => axios.put(`${API_URL}/departments/${id}`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const createDepartment = (data, pin) => axios.post(`${API_URL}/departments/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
-export const approveDocument = (id, data) => axios.post(`${API_URL}/documents/${id}/approve`, data).then(r => r.data)
 
 export const uploadDocument = (file) => {
   const formData = new FormData()
