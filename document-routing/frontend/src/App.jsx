@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
-import { FileText, LayoutDashboard, Upload, Settings, Bell, ChevronRight } from 'lucide-react'
+import { FileText, LayoutDashboard, Upload, Settings, Bell } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import Dashboard from './pages/Dashboard.jsx'
 import DocumentDetail from './pages/DocumentDetail.jsx'
@@ -90,26 +90,6 @@ function Sidebar() {
         })}
       </nav>
 
-      {/* 푸터 */}
-      <div style={{
-        margin: '8px', borderRadius: 10,
-        background: '#fff', border: '1px solid #EBEBEB',
-        padding: '10px 12px',
-        display: 'flex', alignItems: 'center', gap: 10,
-        cursor: 'pointer',
-      }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #5E6AD2, #818CF8)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
-        }}>관</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: '#111827', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>관리자</div>
-          <div style={{ color: '#9CA3AF', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>admin@company.com</div>
-        </div>
-        <ChevronRight size={14} color="#C4C4CF" />
-      </div>
     </aside>
   )
 }

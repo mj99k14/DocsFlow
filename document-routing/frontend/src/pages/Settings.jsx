@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
-import { MessageSquare, Bell, Lock, Building2, Edit2, Check, X, Plus, ShieldCheck } from 'lucide-react'
+import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck } from 'lucide-react'
 import { getDepartments, updateDepartment, createDepartment, verifyAdminPin } from '../services/api.js'
 import { toast } from 'sonner'
 
 const SECTION_ICONS = {
-  slack:    { bg: '#EEF0FF', color: '#5E6AD2', Icon: MessageSquare },
-  dept:     { bg: '#EFF6FF', color: '#3B82F6', Icon: Building2 },
-  notify:   { bg: '#ECFDF5', color: '#10B981', Icon: Bell },
-  security: { bg: '#FEF2F2', color: '#EF4444', Icon: Lock },
+  slack: { bg: '#EEF0FF', color: '#5E6AD2', Icon: MessageSquare },
+  dept:  { bg: '#EFF6FF', color: '#3B82F6', Icon: Building2 },
 }
 
 function SectionHeader({ type, title, desc }) {
@@ -66,41 +64,11 @@ function StyledInput({ value, onChange, placeholder, style, autoFocus, onKeyDown
   )
 }
 
-function ToggleRow({ label, desc, defaultChecked }) {
-  const [on, setOn] = useState(defaultChecked ?? false)
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0' }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{label}</div>
-        <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{desc}</div>
-      </div>
-      <button
-        onClick={() => setOn(v => !v)}
-        style={{
-          width: 42, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-          background: on ? '#5E6AD2' : '#E5E7EB',
-          position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-        }}
-      >
-        <div style={{
-          position: 'absolute', top: 3,
-          left: on ? 21 : 3,
-          width: 18, height: 18, borderRadius: '50%',
-          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-          transition: 'left 0.2s',
-        }} />
-      </button>
-    </div>
-  )
-}
-
-function Divider() {
-  return <div style={{ height: 1, background: '#F3F4F6', margin: '0 -24px' }} />
-}
 
 export default function Settings() {
-  const [adminVerified, setAdminVerified] = useState(() => sessionStorage.getItem('admin_verified') === 'true')
+  const [adminVerified, setAdminVerified] = useState(false)
   const [pin, setPin] = useState('')
+  const [verifiedPin, setVerifiedPin] = useState('')
   const [pinLoading, setPinLoading] = useState(false)
   const [departments, setDepartments] = useState([])
   const [editingIndex, setEditingIndex] = useState(null)
@@ -116,7 +84,7 @@ export default function Settings() {
     setPinLoading(true)
     try {
       await verifyAdminPin(pin)
-      sessionStorage.setItem('admin_verified', 'true')
+      setVerifiedPin(pin)
       setAdminVerified(true)
       toast.success('관리자 인증 완료!')
     } catch {
@@ -186,7 +154,7 @@ export default function Settings() {
       const updated = await updateDepartment(dept.id, {
         slack_channel: dept.slack_channel,
         webhook_url: dept.webhook_url,
-      })
+      }, verifiedPin)
       setDepartments(prev => prev.map(d => d.id === updated.id ? updated : d))
       setEditingIndex(null)
       toast.success('부서 정보가 업데이트되었습니다!')
@@ -198,7 +166,7 @@ export default function Settings() {
   const handleAddDept = async () => {
     if (!newDept.name.trim()) return
     try {
-      const created = await createDepartment(newDept)
+      const created = await createDepartment(newDept, verifiedPin)
       setDepartments(prev => [...prev, created])
       setNewDept({ name: '', slack_channel: '', webhook_url: '' })
       setAddingDept(false)
@@ -402,24 +370,6 @@ export default function Settings() {
             새 부서 추가
           </button>
         )}
-      </Card>
-
-      {/* 알림 설정 */}
-      <Card>
-        <SectionHeader type="notify" title="알림 설정" desc="받고 싶은 알림을 선택하세요" />
-        <ToggleRow label="문서 업로드 완료" desc="파일 업로드가 완료되면 알림" defaultChecked />
-        <Divider />
-        <ToggleRow label="AI 분석 완료" desc="문서 분석이 완료되면 알림" defaultChecked />
-        <Divider />
-        <ToggleRow label="승인 요청" desc="승인이 필요한 문서가 있을 때 알림" />
-      </Card>
-
-      {/* 보안 설정 */}
-      <Card>
-        <SectionHeader type="security" title="보안 설정" desc="데이터 보안 및 접근 제어" />
-        <ToggleRow label="2단계 인증" desc="추가 보안 레이어 활성화" />
-        <Divider />
-        <ToggleRow label="자동 로그아웃" desc="30분 비활성 시 자동 로그아웃" defaultChecked />
       </Card>
 
     </div>

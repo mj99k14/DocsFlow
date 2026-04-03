@@ -7,16 +7,11 @@ export const getDocument = (id) => axios.get(`${API_URL}/documents/${id}`).then(
 export const getDocumentHistory = (id) => axios.get(`${API_URL}/documents/${id}/history`).then(r => r.data)
 export const getDepartments = () => axios.get(`${API_URL}/departments/`).then(r => r.data)
 
-const adminHeaders = () => ({ 'x-admin-pin': sessionStorage.getItem('admin_verified') === 'true' ? sessionStorage.getItem('admin_pin') ?? '' : '' })
-
 export const verifyAdminPin = (pin) =>
-  axios.post(`${API_URL}/admin/verify`, { pin }).then(r => {
-    sessionStorage.setItem('admin_pin', pin)
-    return r.data
-  })
+  axios.post(`${API_URL}/admin/verify`, { pin }).then(r => r.data)
 
-export const updateDepartment = (id, data) => axios.put(`${API_URL}/departments/${id}`, data, { headers: adminHeaders() }).then(r => r.data)
-export const createDepartment = (data) => axios.post(`${API_URL}/departments/`, data, { headers: adminHeaders() }).then(r => r.data)
+export const updateDepartment = (id, data, pin) => axios.put(`${API_URL}/departments/${id}`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
+export const createDepartment = (data, pin) => axios.post(`${API_URL}/departments/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
 export const approveDocument = (id, data) => axios.post(`${API_URL}/documents/${id}/approve`, data).then(r => r.data)
 
