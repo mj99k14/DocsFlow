@@ -95,11 +95,12 @@ class ApprovalResponse(BaseModel):
 # ── 6. 전체 문서 상세 조회 (문서 + 분석결과 + 추천부서) ──────
 
 class DocumentDetailResponse(BaseModel):
-    id         : int
-    file_name  : str
-    status     : StatusType
-    created_at : datetime
-    analysis   : Optional[AnalysisResultResponse] = None  # 분석 결과 (departments 포함)
+    id          : int
+    file_name   : str
+    status      : StatusType
+    created_at  : datetime
+    retry_count : int = 0
+    analysis    : Optional[AnalysisResultResponse] = None  # 분석 결과 (departments 포함)
 
     class Config:
         from_attributes = True

@@ -184,10 +184,13 @@ def retry_document(
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
     if document.status != StatusType.FAILED:
         raise HTTPException(status_code=400, detail="실패한 문서만 재시도할 수 있습니다")
+    if document.retry_count >= 3:
+        raise HTTPException(status_code=400, detail="최대 재시도 횟수(3회)를 초과했습니다")
     if not document.file_path or not os.path.exists(document.file_path):
         raise HTTPException(status_code=400, detail="원본 파일이 존재하지 않습니다")
 
     document.status = StatusType.PENDING
+    document.retry_count += 1
     db.commit()
 
     background_tasks.add_task(process_document, document.id, document.file_path)

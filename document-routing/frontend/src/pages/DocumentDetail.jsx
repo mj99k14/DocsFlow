@@ -116,15 +116,21 @@ export default function DocumentDetail() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Badge className={badge.className}>{badge.label}</Badge>
           {doc.status === 'FAILED' && (
-            <Button
-              size="sm"
-              onClick={handleRetry}
-              disabled={retrying}
-              style={{ gap: 6, background: '#5E6AD2', color: '#fff', border: 'none' }}
-            >
-              <RefreshCw size={14} />
-              {retrying ? '재시도 중...' : '재시도'}
-            </Button>
+            doc.retry_count >= 3 ? (
+              <span style={{ fontSize: 12, color: '#DC2626', fontWeight: 500 }}>
+                최대 재시도 횟수 초과 (3/3)
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleRetry}
+                disabled={retrying}
+                style={{ gap: 6, background: '#5E6AD2', color: '#fff', border: 'none' }}
+              >
+                <RefreshCw size={14} />
+                {retrying ? '재시도 중...' : `재시도 (${doc.retry_count}/3)`}
+              </Button>
+            )
           )}
           <a href={getFileUrl(doc.id)} target="_blank" rel="noreferrer">
             <Button variant="outline" size="sm" style={{ gap: 6 }}>

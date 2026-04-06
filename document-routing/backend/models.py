@@ -33,8 +33,9 @@ class Document(Base):
     id         = Column(Integer, primary_key=True, index=True)
     file_name  = Column(String(255), nullable=False)        # 파일 이름
     file_path  = Column(String(500), nullable=False)        # 저장 경로
-    status     = Column(Enum(StatusType), default=StatusType.PENDING)  # 현재 상태
-    created_at = Column(DateTime, default=utcnow)  # 업로드 시간
+    status      = Column(Enum(StatusType), default=StatusType.PENDING)  # 현재 상태
+    created_at  = Column(DateTime, default=utcnow)  # 업로드 시간
+    retry_count = Column(Integer, default=0)          # 재시도 횟수
 
     # 관계
     analysis = relationship("AnalysisResult", back_populates="document", uselist=False, cascade="all, delete-orphan")
