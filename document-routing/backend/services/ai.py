@@ -1,5 +1,4 @@
 import os
-import json
 import anthropic
 from dotenv import load_dotenv
 
@@ -9,19 +8,41 @@ client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 # ── 프롬프트 ────────────────────────────────────────────────
 SYSTEM_PROMPT = """
-당신은 기업 문서 분류 전문가입니다.
-문서 내용을 분석하고 반드시 아래 JSON 형식으로만 응답하세요.
-다른 설명이나 텍스트는 절대 포함하지 마세요.
+당신은 기업 문서 분류 전문가 AI AGENT 입니다.
+문서 내용을 꼼꼼히 분석하고 반드시 classify_document 툴을 사용하여 분류 하세요.
 
-{
-    "document_type": "계약서 또는 보고서 또는 기획서 또는 품의서 또는 기타",
-    "department": "법무팀 또는 재무팀 또는 인사팀 또는 경영기획팀",
-    "summary": "문서 내용 3줄 요약",
-    "keywords": ["키워드1", "키워드2", "키워드3"],
-    "confidence": 0.0에서 1.0 사이 숫자,
-    "reasoning": "이 부서로 분류한 이유"
-}
+분류 기준:
+- 법무팀: 계약서, 법적 문서, 협약서, 소송 관련
+- 재무팀: 예산, 결산, 회계, 세금, 지출 관련
+- 인사팀: 채용, 급여, 복리후생, 인사평가 관련
+- 경영기획팀: 사업계획, 전략, 보고서, 기획서 관련
 """
+
+#------------tool정의------------------------------------------
+tools = [
+    {
+        "name": "classify_document",
+        "description":"기업 문서를 분석하여 담당 부서를 분류하고 요약합니다.",
+        "input_schema" : {
+            "type" : "object",
+            "properties": {
+                "document_type" :{
+                    "type" :"string",
+                    "enum": ["계약서", "보고서", "기획서", "품의서", "기타"],
+                },
+                "department": {
+                    "type": "string",
+                    "enum" : ["법무팀", "재무팀", "인사팀", "경영기획팀"],
+                },
+            "summary": {"type": "string"},
+            "keywords" : {"type": "array", "items": {"type": "string"}},
+            "confidence" : {"type": "number"},
+            "reasoning": {"type": "string"},
+            },
+            "required": ["document_type", "department", "summary", "keywords", "confidence", "reasoning"],
+        },
+    }
+]
 
 
 # ── Claude API 호출 ──────────────────────────────────────────
@@ -40,32 +61,23 @@ def analyze_document(text: str) -> dict:
     if len(text) > 3000:
         text = text[:3000] + "\n...(이하 생략)"
 
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1000,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"다음 문서를 분석해주세요:\n\n{text}"
-                }
-            ]
-        )
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1000,
+        system=SYSTEM_PROMPT,
+        tools=tools,
+        tool_choice={"type":"tool","name": "classify_document"},
+        messages=[
+            {
+                "role": "user",
+                "content": f"다음 문서를 분석해주세요:\n\n{text}"
+            }
+        ]
+    )
 
-        # 응답 텍스트 추출
-        result_text = response.content[0].text
-
-        # 마크다운 코드블록 제거 후 JSON 파싱
-        if "```" in result_text:
-            result_text = result_text.split("```")[1]
-            if result_text.startswith("json"):
-                result_text = result_text[4:]
-        result = json.loads(result_text.strip())
-        return result
-
-    except json.JSONDecodeError:
-        raise Exception("AI 응답을 JSON으로 파싱할 수 없습니다")
-
-    except Exception as e:
-        raise Exception(f"Claude API 호출 실패: {str(e)}")
+    #TOOL 결과 추출
+    for block in response.content:
+        if block.type == "tool_use" and block.name =="classify_document":
+            return block.input
+    raise Exception("Tool Use 결과 없음")
+       
