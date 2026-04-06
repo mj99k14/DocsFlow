@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock } from 'lucide-react'
-import { getDocument, getDocumentHistory, getDepartments, getFileUrl } from '../services/api.js'
+import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw } from 'lucide-react'
+import { getDocument, getDocumentHistory, getDepartments, getFileUrl, retryDocument } from '../services/api.js'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +30,7 @@ export default function DocumentDetail() {
   const [history, setHistory] = useState([])
   const [deptMap, setDeptMap] = useState({})
   const [loading, setLoading] = useState(true)
+  const [retrying, setRetrying] = useState(false)
 
   useEffect(() => {
     Promise.all([getDocument(id), getDocumentHistory(id), getDepartments()])
@@ -42,6 +43,19 @@ export default function DocumentDetail() {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])
+
+  const handleRetry = async () => {
+    setRetrying(true)
+    try {
+      await retryDocument(id)
+      const d = await getDocument(id)
+      setDoc(d)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   if (loading) return (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -101,6 +115,17 @@ export default function DocumentDetail() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Badge className={badge.className}>{badge.label}</Badge>
+          {doc.status === 'FAILED' && (
+            <Button
+              size="sm"
+              onClick={handleRetry}
+              disabled={retrying}
+              style={{ gap: 6, background: '#5E6AD2', color: '#fff', border: 'none' }}
+            >
+              <RefreshCw size={14} />
+              {retrying ? '재시도 중...' : '재시도'}
+            </Button>
+          )}
           <a href={getFileUrl(doc.id)} target="_blank" rel="noreferrer">
             <Button variant="outline" size="sm" style={{ gap: 6 }}>
               <Download size={14} />

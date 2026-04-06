@@ -172,7 +172,29 @@ def get_document_detail(document_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
     return document
 
-#7.문서 승인 /반려/보류
+# ── 7. 분석 재시도 ───────────────────────────────────────────
+@router.post("/{document_id}/retry")
+def retry_document(
+    document_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+    if document.status != StatusType.FAILED:
+        raise HTTPException(status_code=400, detail="실패한 문서만 재시도할 수 있습니다")
+    if not document.file_path or not os.path.exists(document.file_path):
+        raise HTTPException(status_code=400, detail="원본 파일이 존재하지 않습니다")
+
+    document.status = StatusType.PENDING
+    db.commit()
+
+    background_tasks.add_task(process_document, document.id, document.file_path)
+    return {"message": "재분석을 시작합니다"}
+
+
+#8.문서 승인 /반려/보류
 
 @router.post("/{document_id}/approve", response_model=ApprovalResponse)
 def approve_document(

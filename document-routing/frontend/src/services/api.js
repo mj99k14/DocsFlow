@@ -36,6 +36,9 @@ export const updateDepartment = (id, data, pin) => axios.put(`${API_URL}/departm
 export const createDepartment = (data, pin) => axios.post(`${API_URL}/departments/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
 
+export const retryDocument = (id) =>
+  axios.post(`${API_URL}/documents/${id}/retry`).then(r => r.data)
+
 export const uploadDocument = (file) => {
   const formData = new FormData()
   formData.append('file', file)
