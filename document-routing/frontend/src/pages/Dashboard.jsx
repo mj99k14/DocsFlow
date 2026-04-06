@@ -26,12 +26,17 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [filterDept, setFilterDept] = useState('ALL')
   const [hideApproved, setHideApproved] = useState(true)
+  const [error, setError] = useState(null)
   const navigate = useNavigate()
   const pollingRef = useRef(null)
 
   const load = async () => {
-    try { setDocuments(await getDocuments()) }
-    catch (e) { console.error(e) }
+    try {
+      setDocuments(await getDocuments())
+      setError(null)
+    } catch (e) {
+      setError('서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.')
+    }
   }
 
   useEffect(() => {
@@ -96,6 +101,13 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: 32, height: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* 에러 배너 */}
+      {error && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#DC2626' }}>
+          {error}
+        </div>
+      )}
 
       {/* 페이지 헤더 */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>

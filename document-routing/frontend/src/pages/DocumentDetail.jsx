@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw } from 'lucide-react'
 import { getDocument, getDocumentHistory, getDepartments, getFileUrl, retryDocument } from '../services/api.js'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -50,8 +51,10 @@ export default function DocumentDetail() {
       await retryDocument(id)
       const d = await getDocument(id)
       setDoc(d)
+      toast.success('재분석을 시작했습니다')
     } catch (e) {
-      console.error(e)
+      const msg = e.response?.data?.detail || '재시도에 실패했습니다'
+      toast.error(msg)
     } finally {
       setRetrying(false)
     }
