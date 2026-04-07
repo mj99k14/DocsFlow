@@ -8,8 +8,9 @@ import {
   getDocument,
   getDepartments,
   uploadDocument,
-  approveDocument,
   updateDepartment,
+  createDepartment,
+  retryDocument,
 } from '../../services/api.js'
 
 vi.mock('axios')
@@ -62,29 +63,42 @@ describe('api.js', () => {
     expect(config.headers['Content-Type']).toBe('multipart/form-data')
   })
 
-  it('approveDocument(3, data) — POST /documents/3/approve 호출 확인', async () => {
+  it('retryDocument(7) — POST /documents/7/retry 호출 확인', async () => {
     axios.post.mockResolvedValue({ data: {} })
 
-    const approveData = { comment: '승인합니다', approver: '김팀장' }
-    await approveDocument(3, approveData)
+    await retryDocument(7)
 
     expect(axios.post).toHaveBeenCalledTimes(1)
-    expect(axios.post).toHaveBeenCalledWith(
-      `${API_URL}/documents/3/approve`,
-      approveData
-    )
+    expect(axios.post).toHaveBeenCalledWith(`${API_URL}/documents/7/retry`)
   })
 
-  it('updateDepartment(2, data) — PUT /departments/2 호출 확인', async () => {
+  it('updateDepartment(2, data, pin) — PUT /departments/2 + x-admin-pin 헤더 호출 확인', async () => {
     axios.put.mockResolvedValue({ data: {} })
 
     const updateData = { name: '법무팀', slack_webhook: 'https://hooks.slack.com/xxx' }
-    await updateDepartment(2, updateData)
+    const pin = '1234'
+    await updateDepartment(2, updateData, pin)
 
     expect(axios.put).toHaveBeenCalledTimes(1)
     expect(axios.put).toHaveBeenCalledWith(
       `${API_URL}/departments/2`,
-      updateData
+      updateData,
+      { headers: { 'x-admin-pin': pin } }
+    )
+  })
+
+  it('createDepartment(data, pin) — POST /departments/ + x-admin-pin 헤더 호출 확인', async () => {
+    axios.post.mockResolvedValue({ data: {} })
+
+    const deptData = { name: '신규팀', slack_channel: '#new' }
+    const pin = '1234'
+    await createDepartment(deptData, pin)
+
+    expect(axios.post).toHaveBeenCalledTimes(1)
+    expect(axios.post).toHaveBeenCalledWith(
+      `${API_URL}/departments/`,
+      deptData,
+      { headers: { 'x-admin-pin': pin } }
     )
   })
 })

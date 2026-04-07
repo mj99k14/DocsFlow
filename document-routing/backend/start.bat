@@ -1,0 +1,6 @@
+@echo off
+echo Starting ngrok...
+start "ngrok" ngrok http 8000
+
+echo Starting uvicorn...
+c:\Users\YJU\Desktop\DOCX\.venv\Scripts\uvicorn main:app --reload
