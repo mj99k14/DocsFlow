@@ -34,7 +34,7 @@ def test_analyze_document_returns_valid_dict():
     mock_response = _make_tool_use_response(VALID_AI_RESULT)
 
     with patch("services.ai.client.messages.create", return_value=mock_response):
-        result = analyze_document("이 문서는 계약서입니다.")
+        result = analyze_document("이 문서는 계약서입니다.", ["법무팀", "재무팀", "인사팀", "경영기획팀"])
 
     assert isinstance(result, dict)
     for key in ("document_type", "department", "summary", "keywords", "confidence", "reasoning"):
@@ -46,7 +46,7 @@ def test_analyze_document_returns_correct_values():
     mock_response = _make_tool_use_response(VALID_AI_RESULT)
 
     with patch("services.ai.client.messages.create", return_value=mock_response):
-        result = analyze_document("이 문서는 계약서입니다.")
+        result = analyze_document("이 문서는 계약서입니다.", ["법무팀", "재무팀", "인사팀", "경영기획팀"])
 
     assert result["document_type"] == "계약서"
     assert result["department"] == "법무팀"
@@ -59,7 +59,7 @@ def test_long_text_truncated_to_3000_chars():
     mock_response = _make_tool_use_response(VALID_AI_RESULT)
 
     with patch("services.ai.client.messages.create", return_value=mock_response) as mock_create:
-        analyze_document(long_text)
+        analyze_document(long_text, ["법무팀", "재무팀", "인사팀", "경영기획팀"])
 
     user_content = mock_create.call_args.kwargs["messages"][0]["content"]
     assert "가" * 3001 not in user_content
@@ -72,7 +72,7 @@ def test_short_text_not_truncated():
     mock_response = _make_tool_use_response(VALID_AI_RESULT)
 
     with patch("services.ai.client.messages.create", return_value=mock_response) as mock_create:
-        analyze_document(short_text)
+        analyze_document(short_text, ["법무팀", "재무팀", "인사팀", "경영기획팀"])
 
     user_content = mock_create.call_args.kwargs["messages"][0]["content"]
     assert short_text in user_content
@@ -89,11 +89,11 @@ def test_no_tool_use_block_raises_exception():
 
     with patch("services.ai.client.messages.create", return_value=mock_response):
         with pytest.raises(Exception):
-            analyze_document("문서 내용")
+            analyze_document("문서 내용", ["법무팀", "재무팀"])
 
 
 def test_api_call_failure_raises_exception():
     """Claude API 호출 자체가 실패하면 Exception이 전파된다."""
     with patch("services.ai.client.messages.create", side_effect=Exception("네트워크 오류")):
         with pytest.raises(Exception):
-            analyze_document("문서 내용")
+            analyze_document("문서 내용", ["법무팀", "재무팀"])

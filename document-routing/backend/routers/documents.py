@@ -29,8 +29,9 @@ def process_document(document_id: int, file_path: str):
         # 2. PDF 텍스트 추출
         text = extract_text_from_pdf(file_path)
 
-        # 3. Claude AI 분석
-        ai_result = analyze_document(text)
+        # 3. Claude AI 분석 (DB 부서 목록 동적 전달)
+        department_names = [d.name for d in db.query(Department).all()]
+        ai_result = analyze_document(text, department_names)
 
         # 4. 분석 결과 DB 저장
         analysis = AnalysisResult(
