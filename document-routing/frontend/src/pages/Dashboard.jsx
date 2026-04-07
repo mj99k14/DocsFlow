@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, CheckCircle, Clock, TrendingUp, ArrowUpRight, Search, X } from 'lucide-react'
-import { getDocuments, getDepartments } from '../services/api.js'
+import { getDocuments, getDepartments, getDocumentsCount } from '../services/api.js'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -27,12 +27,20 @@ export default function Dashboard() {
   const [filterDept, setFilterDept] = useState('ALL')
   const [hideApproved, setHideApproved] = useState(true)
   const [error, setError] = useState(null)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const PAGE_SIZE = 20
   const navigate = useNavigate()
   const pollingRef = useRef(null)
 
   const load = async () => {
     try {
-      setDocuments(await getDocuments())
+      const [docs, countData] = await Promise.all([
+        getDocuments(page, PAGE_SIZE),
+        getDocumentsCount(),
+      ])
+      setDocuments(docs)
+      setTotal(countData.total)
       setError(null)
     } catch (e) {
       setError('서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.')
@@ -48,7 +56,7 @@ export default function Dashboard() {
     }).catch(console.error)
     pollingRef.current = setInterval(load, 5000)
     return () => clearInterval(pollingRef.current)
-  }, [])
+  }, [page])
 
   const filteredDocuments = documents.filter(doc => {
     const deptName = deptMap[doc.analysis?.departments?.[0]?.department_id] || ''
@@ -205,7 +213,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <Table>
             <TableHeader>
               <TableRow style={{ background: '#FAFAFA' }}>
@@ -281,6 +289,35 @@ export default function Dashboard() {
               )}
             </TableBody>
           </Table>
+          {/* 페이지네이션 */}
+          {total > PAGE_SIZE && (
+            <div style={{ padding: '12px 24px', borderTop: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ fontSize: 13, color: '#9CA3AF' }}>
+                총 {total}건 중 {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}건
+              </span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                >
+                  이전
+                </Button>
+                <span style={{ fontSize: 13, color: '#374151', padding: '0 8px', lineHeight: '32px' }}>
+                  {page} / {Math.ceil(total / PAGE_SIZE)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= Math.ceil(total / PAGE_SIZE)}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  다음
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </div>

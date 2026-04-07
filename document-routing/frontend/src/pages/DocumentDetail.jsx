@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw } from 'lucide-react'
-import { getDocument, getDocumentHistory, getDepartments, getFileUrl, retryDocument } from '../services/api.js'
+import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw, Trash2 } from 'lucide-react'
+import { getDocument, getDocumentHistory, getDepartments, getFileUrl, retryDocument, deleteDocument } from '../services/api.js'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -32,6 +32,9 @@ export default function DocumentDetail() {
   const [deptMap, setDeptMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [retrying, setRetrying] = useState(false)
+  const [deletePin, setDeletePin] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     Promise.all([getDocument(id), getDocumentHistory(id), getDepartments()])
@@ -44,6 +47,19 @@ export default function DocumentDetail() {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteDocument(id, deletePin)
+      toast.success('문서가 삭제되었습니다')
+      navigate('/')
+    } catch (e) {
+      const msg = e.response?.data?.detail || '삭제에 실패했습니다'
+      toast.error(msg)
+      setDeleting(false)
+    }
+  }
 
   const handleRetry = async () => {
     setRetrying(true)
@@ -141,8 +157,62 @@ export default function DocumentDetail() {
               다운로드
             </Button>
           </a>
+          <Button
+            variant="outline"
+            size="sm"
+            style={{ gap: 6, color: '#DC2626', borderColor: '#FECACA' }}
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 size={14} />
+            삭제
+          </Button>
         </div>
       </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={18} color="#DC2626" />
+              </div>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>문서 삭제</p>
+            </div>
+            <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 20, lineHeight: 1.6 }}>
+              이 문서를 삭제하면 복구할 수 없습니다.<br />관리자 PIN을 입력해 확인하세요.
+            </p>
+            <input
+              type="password"
+              placeholder="관리자 PIN"
+              value={deletePin}
+              onChange={e => setDeletePin(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && deletePin && handleDelete()}
+              style={{ width: '100%', boxSizing: 'border-box', height: 38, padding: '0 12px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 14, marginBottom: 16, outline: 'none' }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="outline"
+                style={{ flex: 1 }}
+                onClick={() => { setShowDeleteConfirm(false); setDeletePin('') }}
+              >
+                취소
+              </Button>
+              <Button
+                disabled={!deletePin || deleting}
+                onClick={handleDelete}
+                style={{ flex: 1, background: '#DC2626', color: '#fff', border: 'none' }}
+              >
+                {deleting ? '삭제 중...' : '삭제'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 본문 */}
       <div style={{ flex: 1, overflow: 'auto', padding: 32 }}>

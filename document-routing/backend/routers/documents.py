@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session, selectinload
 from database import get_db
 from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType, ApprovalHistory, SystemSettings
@@ -10,6 +10,7 @@ from services.slack import send_slack_notification, send_approved_notification
 from database import sessionLocal
 from fastapi.responses import FileResponse
 from schemas import ApprovalRequest
+from routers.departments import verify_admin
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -122,12 +123,23 @@ async def upload_document(
     return document
 
 
-# ── 2. 문서 목록 조회 ────────────────────────────────────────
+# ── 2. 문서 목록 조회 (페이지네이션) ────────────────────────
 @router.get("/", response_model=list[DocumentDetailResponse])
-def get_documents(db: Session = Depends(get_db)):
+def get_documents(
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    offset = (page - 1) * size
     return db.query(Document).options(
         selectinload(Document.analysis).selectinload(AnalysisResult.departments)
-    ).order_by(Document.created_at.desc()).all()
+    ).order_by(Document.created_at.desc()).offset(offset).limit(size).all()
+
+
+# ── 3. 문서 총 개수 조회 ─────────────────────────────────────
+@router.get("/count")
+def get_documents_count(db: Session = Depends(get_db)):
+    return {"total": db.query(Document).count()}
 
 
 # ── 3. 문서 상태 조회 ────────────────────────────────────────
@@ -198,7 +210,27 @@ def retry_document(
     return {"message": "재분석을 시작합니다"}
 
 
-#8.문서 승인 /반려/보류
+# ── 8. 문서 삭제 ─────────────────────────────────────────────
+@router.delete("/{document_id}")
+def delete_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(verify_admin)
+):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+
+    # 파일 삭제
+    if document.file_path and os.path.exists(document.file_path):
+        os.remove(document.file_path)
+
+    db.delete(document)
+    db.commit()
+    return {"message": "문서가 삭제되었습니다"}
+
+
+# ── 9. 문서 승인/반려/보류 ───────────────────────────────────
 
 @router.post("/{document_id}/approve", response_model=ApprovalResponse)
 def approve_document(

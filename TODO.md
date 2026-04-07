@@ -46,69 +46,80 @@
 
 ---
 
-## 📚 공부 — 백엔드 (Python / FastAPI)
+## 📚 3일 공부 계획
 
-- [ ] **SQLAlchemy ORM**
-  - Column 타입 (String, Integer, Float, JSONB, Enum)
-  - relationship, ForeignKey, cascade
-  - `db.query().filter().first()` 패턴
-  - `selectinload` — N+1 쿼리 문제와 해결
-- [ ] **FastAPI 핵심**
-  - `Depends(get_db)` — 의존성 주입 패턴
-  - `BackgroundTasks` — 비동기 백그라운드 작업
-  - `lifespan` — 앱 시작/종료 시 실행되는 코드
-  - `APIRouter` — 라우터 분리 구조
-- [ ] **Pydantic**
-  - `BaseModel`, `Optional`, `from_attributes`
-  - 요청/응답 스키마 분리하는 이유
+> 각 날은 **개념 설명 → 코드 리뷰** 순서로 진행한다.
+> 이 프로젝트 코드를 직접 보면서 "왜 이렇게 썼는지"를 이해하는 것이 목표다.
+
+---
+
+### Day 1 — 백엔드 핵심: DB와 API 구조
+
+**개념 설명**
+- [ ] **SQLAlchemy ORM** — DB를 Python 객체로 다루는 방법
+  - `Column`, `relationship`, `ForeignKey`, `cascade` 가 뭔지
+  - `db.query().filter().first()` 패턴이 SQL로 치면 뭔지
+  - `selectinload` — N+1 쿼리 문제가 뭔지, 왜 쓰는지
+- [ ] **FastAPI 구조**
+  - `APIRouter` — 왜 라우터를 파일로 분리하는지
+  - `Depends(get_db)` — 의존성 주입이 뭔지, 왜 쓰는지
+  - `BackgroundTasks` — 업로드 후 즉시 응답하는 이유
+- [ ] **Pydantic 스키마**
+  - `models.py` vs `schemas.py` — 둘이 왜 따로 있는지
+  - `from_attributes = True` 가 뭔지
+
+**코드 리뷰**
+- [ ] `database.py` — engine, sessionLocal, get_db() 흐름
+- [ ] `models.py` — Document → AnalysisResult → DocumentDepartment 관계
+- [ ] `routers/documents.py` — 업로드부터 AI 분석까지 전체 파이프라인
+
+---
+
+### Day 2 — AI 연동과 비동기 처리
+
+**개념 설명**
 - [ ] **Claude Tool Use API**
-  - `tools`, `tool_choice` 파라미터
-  - `block.type == "tool_use"` 응답 파싱
   - 일반 텍스트 응답 vs Tool Use 차이
-- [ ] **APScheduler**
-  - `BackgroundScheduler` vs `AsyncScheduler`
-  - cron 표현식 (`hour=0, minute=0`)
+  - `tools`, `tool_choice` 파라미터가 하는 일
+  - `block.type == "tool_use"` 로 응답 파싱하는 이유
 - [ ] **환경변수 (.env)**
-  - `dotenv` 사용법
-  - 민감 정보 분리하는 이유
-
----
-
-## 📚 공부 — 프론트엔드 (React)
-
-- [ ] **useState / useEffect**
-  - 상태가 바뀌면 왜 리렌더링되는지
-  - useEffect 의존성 배열 `[]` vs `[값]` 차이
-  - 폴링 구현 (`setInterval` + `useRef` + cleanup)
-- [ ] **React Router**
-  - `useParams` — URL에서 `:id` 꺼내는 법
-  - `useNavigate` — 코드로 페이지 이동
-  - `<Route>` 구조
-- [ ] **axios 패턴**
-  - `.then(r => r.data)` 체이닝
-  - `headers` 넘기는 법 (PIN 인증)
-  - `responseType: 'blob'` — 파일 다운로드
-  - `FormData` — 파일 업로드
-- [ ] **컴포넌트 구조**
-  - props 전달
-  - 조건부 렌더링 (`&&`, 삼항연산자)
-  - 리스트 렌더링 (`.map()` + `key`)
-- [ ] **shadcn/ui**
-  - 로컬에 복사된 컴포넌트 구조
-  - Tailwind CSS 클래스 기반 스타일링
-  - CSS 변수 (`--card`, `--primary` 등)
-
----
-
-## 📚 공부 — 인프라 / 기타
-
+  - API 키를 코드에 안 쓰는 이유
+  - `os.getenv()` / `dotenv` 동작 방식
+- [ ] **APScheduler**
+  - 30일 자동 삭제가 어떻게 돌아가는지
+  - `BackgroundScheduler` vs `cron` 표현식
 - [ ] **PostgreSQL 기본**
-  - `psql` 접속 및 기본 쿼리
-  - `ALTER TABLE` — 컬럼 추가
-  - JSONB 타입 (keywords 저장 방식)
+  - JSONB 타입 — keywords 가 왜 JSONB로 저장되는지
+  - `ALTER TABLE` — 왜 create_all()로 컬럼 추가가 안 되는지
+
+**코드 리뷰**
+- [ ] `services/ai.py` — `_build_system_prompt`, `_build_tools`, `analyze_document` 흐름
+- [ ] `services/pdf.py` — PDF 텍스트 추출 방식
+- [ ] `services/slack.py` — Webhook 메시지 전송 구조
+- [ ] `main.py` — lifespan, 라우터 등록, CORS 설정
+
+---
+
+### Day 3 — 프론트엔드: React + API 연동
+
+**개념 설명**
+- [ ] **useState / useEffect**
+  - 상태가 바뀌면 왜 화면이 다시 그려지는지
+  - `useEffect` 의존성 배열 `[]` vs `[page]` 차이
+  - 폴링 구현 — `setInterval` + `useRef` + cleanup 패턴
+- [ ] **React Router**
+  - `useParams` — URL의 `:id` 를 어떻게 꺼내는지
+  - `useNavigate` — 삭제 후 대시보드로 이동하는 코드
+- [ ] **axios 패턴**
+  - `.then(r => r.data)` 체이닝이 뭔지
+  - `headers` 로 PIN 넘기는 방식
+  - `FormData` — 파일 업로드할 때 왜 쓰는지
 - [ ] **CORS**
-  - 왜 필요한지 (브라우저 보안 정책)
-  - `allow_origins` 설정
-- [ ] **Git 흐름**
-  - `add → commit → push` 각 단계 의미
-  - `.gitignore` — 올리면 안 되는 파일 관리
+  - 왜 백엔드에 `allow_origins` 설정이 필요한지
+  - 프론트(3000) → 백엔드(8000) 요청이 막히는 이유
+
+**코드 리뷰**
+- [ ] `services/api.js` — 전체 API 함수 구조
+- [ ] `Dashboard.jsx` — 폴링, 필터, 페이지네이션 흐름
+- [ ] `DocumentDetail.jsx` — 상태 관리, 재시도, 삭제 흐름
+- [ ] `App.jsx` — 라우팅 구조, 레이아웃

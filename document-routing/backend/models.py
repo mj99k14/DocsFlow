@@ -56,7 +56,7 @@ class AnalysisResult(Base):
 
     # 관계
     document    = relationship("Document", back_populates="analysis")
-    departments = relationship("DocumentDepartment", back_populates="analysis")
+    departments = relationship("DocumentDepartment", back_populates="analysis", cascade="all, delete-orphan")
 
 
 # ── 3. departments (부서) ────────────────────────────────────
