@@ -8,7 +8,7 @@ import models
 from routers import documents, slack, departments, admin
 from datetime import datetime, timedelta, timezone
 
-models.Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=engine) #models테이블이없으면 생성 있으면 pass
 
 
 def cleanup_old_documents():

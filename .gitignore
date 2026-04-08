@@ -9,3 +9,10 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+.pytest_cache/
+
+# 업로드된 파일 (로컬 전용)
+document-routing/backend/uploaded_files/
+
+# Claude
+.claude/
