@@ -251,6 +251,45 @@ def send_approved_notification(document_id: int, file_name: str, dept_name: str,
     print(f" 승인 알림 전송 완료 → {dept_name} ({file_name})")
 
 
+def send_human_rejected_notification(document_id: int, file_name: str, rejected_by: str, dept_name: str):
+    """웹에서 반려 시 관리자 채널로 알림 전송"""
+    if not WEBHOOK_ADMIN:
+        print(" 관리자 Webhook URL이 설정되지 않았습니다")
+        return False
+
+    message = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "❌ [반려됨] 담당자가 문서를 반려했습니다", "emoji": True}
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*파일명*\n{file_name}"},
+                    {"type": "mrkdwn", "text": f"*AI 추천 부서*\n{dept_name}"},
+                    {"type": "mrkdwn", "text": f"*반려한 담당자*\n{rejected_by}"},
+                ]
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*📎 원본 파일*\n<{BASE_URL}/documents/{document_id}/file|{file_name} 다운로드>"
+                }
+            },
+        ]
+    }
+
+    response = requests.post(WEBHOOK_ADMIN, json=message)
+    if response.status_code != 200:
+        print(f" 반려 알림 전송 실패: {response.status_code} {response.text}")
+        return False
+
+    print(f" 반려 알림 전송 완료 ({file_name})")
+    return True
+
+
 def send_held_notification(document_id: int, file_name: str, held_by: str, analysis=None):
     """보류 시 관리자 채널로 알림 전송"""
     if not WEBHOOK_ADMIN:

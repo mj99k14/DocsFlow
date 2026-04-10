@@ -6,7 +6,7 @@ from models import Document, AnalysisResult, DocumentDepartment, Department, Sta
 from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse, ApprovalResponse
 from services.pdf import extract_text, ALLOWED_EXTENSIONS
 from services.ai import analyze_document
-from services.slack import send_slack_notification, send_approved_notification
+from services.slack import send_slack_notification, send_approved_notification, send_human_rejected_notification, send_held_notification
 from database import sessionLocal
 from fastapi.responses import FileResponse
 from schemas import ApprovalRequest
@@ -257,19 +257,25 @@ def approve_document(
     db.commit()
     db.refresh(approval)
 
-    # 승인 시 해당 부서 Slack 채널로 알림 재전송
-    if data.action == "APPROVED":
-        analysis = db.query(AnalysisResult).filter(AnalysisResult.document_id == document_id).first()
-        if analysis:
-            doc_dept = db.query(DocumentDepartment).filter(DocumentDepartment.analysis_id == analysis.id).first()
-            dept_name = ""
-            if doc_dept:
-                dept = db.query(Department).filter(Department.id == doc_dept.department_id).first()
-                dept_name = dept.name if dept else ""
-            try:
-               webhook_url = dept.webhook_url if dept else None
-               send_approved_notification(document_id, document.file_name, dept_name, data.approved_by, webhook_url=webhook_url)
-            except Exception as e:
-                print(f" Slack 알림 전송 실패: {str(e)}")
+    # Slack 알림
+    analysis = db.query(AnalysisResult).filter(AnalysisResult.document_id == document_id).first()
+    dept_name = ""
+    dept = None
+    if analysis:
+        doc_dept = db.query(DocumentDepartment).filter(DocumentDepartment.analysis_id == analysis.id).first()
+        if doc_dept:
+            dept = db.query(Department).filter(Department.id == doc_dept.department_id).first()
+            dept_name = dept.name if dept else ""
+
+    try:
+        if data.action == "APPROVED":
+            webhook_url = dept.webhook_url if dept else None
+            send_approved_notification(document_id, document.file_name, dept_name, data.approved_by, webhook_url=webhook_url)
+        elif data.action == "REJECTED":
+            send_human_rejected_notification(document_id, document.file_name, data.approved_by, dept_name)
+        elif data.action == "HELD":
+            send_held_notification(document_id, document.file_name, data.approved_by, analysis)
+    except Exception as e:
+        print(f" Slack 알림 전송 실패: {str(e)}")
 
     return approval
