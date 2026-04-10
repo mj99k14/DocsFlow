@@ -15,22 +15,22 @@ export default function UploadPage() {
   const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
   const addFiles = (newFiles) => {
-    const pdfs = Array.from(newFiles).filter(f => f.name.endsWith('.pdf'))
-    if (pdfs.length < Array.from(newFiles).length) {
-      toast.error('PDF 파일만 업로드 가능합니다')
+    const valid = Array.from(newFiles).filter(f => f.name.endsWith('.pdf') || f.name.endsWith('.docx'))
+    if (valid.length < Array.from(newFiles).length) {
+      toast.error('PDF, DOCX 파일만 업로드 가능합니다')
     }
-    const oversized = pdfs.filter(f => f.size > MAX_SIZE)
+    const oversized = valid.filter(f => f.size > MAX_SIZE)
     if (oversized.length > 0) {
       toast.error(`10MB를 초과한 파일은 업로드할 수 없습니다: ${oversized.map(f => f.name).join(', ')}`)
     }
-    const validPdfs = pdfs.filter(f => f.size <= MAX_SIZE)
+    const validFiles = valid.filter(f => f.size <= MAX_SIZE)
     setFiles(prev => {
       const existingNames = new Set(prev.map(f => f.name))
-      const duplicates = validPdfs.filter(f => existingNames.has(f.name))
+      const duplicates = validFiles.filter(f => existingNames.has(f.name))
       if (duplicates.length > 0) {
         toast.error(`이미 추가된 파일입니다: ${duplicates.map(f => f.name).join(', ')}`)
       }
-      return [...prev, ...validPdfs.filter(f => !existingNames.has(f.name))]
+      return [...prev, ...validFiles.filter(f => !existingNames.has(f.name))]
     })
   }
 
@@ -108,7 +108,7 @@ export default function UploadPage() {
                 파일을 드래그하거나 클릭하여 업로드
               </p>
               <p style={{ fontSize: 13, color: '#9CA3AF' }}>
-                PDF 파일 지원 · 최대 10MB
+                PDF, DOCX 파일 지원 · 최대 10MB
               </p>
             </div>
             <div style={{
@@ -122,7 +122,7 @@ export default function UploadPage() {
             }}>
               파일 선택
             </div>
-            <input type="file" multiple accept=".pdf" onChange={e => addFiles(e.target.files)} style={{ display: 'none' }} />
+            <input type="file" multiple accept=".pdf,.docx" onChange={e => addFiles(e.target.files)} style={{ display: 'none' }} />
           </label>
 
           {/* 파일 목록 */}
@@ -214,6 +214,9 @@ export default function UploadPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <span style={{ padding: '4px 12px', background: '#EEF0FF', color: '#5E6AD2', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
                 PDF
+              </span>
+              <span style={{ padding: '4px 12px', background: '#EEF0FF', color: '#5E6AD2', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
+                DOCX
               </span>
             </div>
             <p style={{ fontSize: 12, color: '#9CA3AF', marginTop: 12 }}>최대 파일 크기: 10MB</p>

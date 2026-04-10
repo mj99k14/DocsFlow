@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 from database import get_db
 from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType, ApprovalHistory, SystemSettings
 from schemas import DocumentResponse, DocumentStatusResponse, DocumentDetailResponse, ApprovalResponse
-from services.pdf import extract_text_from_pdf
+from services.pdf import extract_text, ALLOWED_EXTENSIONS
 from services.ai import analyze_document
 from services.slack import send_slack_notification, send_approved_notification
 from database import sessionLocal
@@ -27,8 +27,8 @@ def process_document(document_id: int, file_path: str):
         document.status = StatusType.ANALYZING
         db.commit()
         
-        # 2. PDF 텍스트 추출
-        text = extract_text_from_pdf(file_path)
+        # 2. 텍스트 추출 (PDF/DOCX)
+        text = extract_text(file_path)
 
         # 3. Claude AI 분석 (DB 부서 목록 동적 전달)
         department_names = [d.name for d in db.query(Department).all()]
@@ -100,8 +100,8 @@ async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="PDF 파일만 업로드 가능합니다")
+    if not any(file.filename.endswith(ext) for ext in ALLOWED_EXTENSIONS):
+        raise HTTPException(status_code=400, detail=f"PDF, DOCX 파일만 업로드 가능합니다")
 
     file_path = f"{UPLOAD_DIR}/{file.filename}"
     with open(file_path, "wb") as f:

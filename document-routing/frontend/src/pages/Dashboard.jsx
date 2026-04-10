@@ -12,7 +12,7 @@ import {
 const STATUS_BADGE = {
   PENDING:   { label: '대기중',    className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
   ANALYZING: { label: '분석중',    className: 'bg-blue-50 text-blue-600 hover:bg-blue-50' },
-  COMPLETED: { label: '완료',      className: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-50' },
+  COMPLETED: { label: '승인 대기',  className: 'bg-amber-50 text-amber-600 hover:bg-amber-50' },
   APPROVED:  { label: '승인됨',    className: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-50' },
   REJECTED:  { label: '반려',      className: 'bg-red-50 text-red-600 hover:bg-red-50' },
   HELD:      { label: '보류',      className: 'bg-purple-50 text-purple-600 hover:bg-purple-50' },
