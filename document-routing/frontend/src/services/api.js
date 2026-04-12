@@ -35,6 +35,7 @@ export const exportApprovals = (pin) =>
 
 export const updateDepartment = (id, data, pin) => axios.put(`${API_URL}/departments/${id}`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const createDepartment = (data, pin) => axios.post(`${API_URL}/departments/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
+export const deleteDepartment = (id, pin) => axios.delete(`${API_URL}/departments/${id}`, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
 
 export const retryDocument = (id) =>

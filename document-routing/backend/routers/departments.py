@@ -46,3 +46,13 @@ def update_department(dept_id: int, data: DepartmentUpdate, db: Session = Depend
     return dept
 
 
+@router.delete("/{dept_id}")
+def delete_department(dept_id: int, db: Session = Depends(get_db), _=Depends(verify_admin)):
+    dept = db.query(Department).filter(Department.id == dept_id).first()
+    if not dept:
+        raise HTTPException(status_code=404, detail="부서를 찾을 수 없습니다")
+    db.delete(dept)
+    db.commit()
+    return {"message": "부서가 삭제되었습니다"}
+
+

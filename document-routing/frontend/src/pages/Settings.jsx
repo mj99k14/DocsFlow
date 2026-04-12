@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck, Sparkles, BarChart2 } from 'lucide-react'
-import { getDepartments, updateDepartment, createDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals } from '../services/api.js'
+import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck, Sparkles, BarChart2, Trash2 } from 'lucide-react'
+import { getDepartments, updateDepartment, createDepartment, deleteDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals } from '../services/api.js'
 import { toast } from 'sonner'
 
 const SECTION_ICONS = {
@@ -186,6 +186,17 @@ export default function Settings() {
     }
   }
 
+  const handleDeleteDept = async (dept) => {
+    if (!window.confirm(`"${dept.name}" 부서를 삭제하시겠습니까?`)) return
+    try {
+      await deleteDepartment(dept.id, verifiedPin)
+      setDepartments(prev => prev.filter(d => d.id !== dept.id))
+      toast.success('부서가 삭제되었습니다.')
+    } catch (e) {
+      toast.error('삭제 실패: ' + e.message)
+    }
+  }
+
   const handleAddDept = async () => {
     if (!newDept.name.trim()) return
     try {
@@ -225,7 +236,7 @@ export default function Settings() {
         <div style={{ border: '1px solid #F3F4F6', borderRadius: 8, overflow: 'hidden' }}>
           {/* 테이블 헤더 */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 80px',
+            display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 110px',
             background: '#FAFAFA', padding: '8px 16px',
             borderBottom: '1px solid #F3F4F6',
           }}>
@@ -239,7 +250,7 @@ export default function Settings() {
             <div
               key={dept.id}
               style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 80px',
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 110px',
                 alignItems: 'center', padding: '10px 16px',
                 borderBottom: index < departments.length - 1 ? '1px solid #F9FAFB' : 'none',
                 background: editingIndex === index ? '#FAFBFF' : '#fff',
@@ -316,12 +327,20 @@ export default function Settings() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => setEditingIndex(index)}
-                    style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #EBEBEB', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Edit2 size={13} color="#6B7280" />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setEditingIndex(index)}
+                      style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #EBEBEB', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Edit2 size={13} color="#6B7280" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDept(dept)}
+                      style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #FECACA', background: '#FFF5F5', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Trash2 size={13} color="#DC2626" />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
