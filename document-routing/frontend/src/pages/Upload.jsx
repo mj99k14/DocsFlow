@@ -15,9 +15,10 @@ export default function UploadPage() {
   const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
   const addFiles = (newFiles) => {
-    const valid = Array.from(newFiles).filter(f => f.name.endsWith('.pdf') || f.name.endsWith('.docx'))
+    const EXTS = ['.pdf', '.docx', '.pptx', '.txt']
+    const valid = Array.from(newFiles).filter(f => EXTS.some(ext => f.name.endsWith(ext)))
     if (valid.length < Array.from(newFiles).length) {
-      toast.error('PDF, DOCX 파일만 업로드 가능합니다')
+      toast.error('PDF, DOCX, PPTX, TXT 파일만 업로드 가능합니다')
     }
     const oversized = valid.filter(f => f.size > MAX_SIZE)
     if (oversized.length > 0) {
@@ -108,7 +109,7 @@ export default function UploadPage() {
                 파일을 드래그하거나 클릭하여 업로드
               </p>
               <p style={{ fontSize: 13, color: '#9CA3AF' }}>
-                PDF, DOCX 파일 지원 · 최대 10MB
+                PDF, DOCX, PPTX, TXT 파일 지원 · 최대 10MB
               </p>
             </div>
             <div style={{
@@ -122,7 +123,7 @@ export default function UploadPage() {
             }}>
               파일 선택
             </div>
-            <input type="file" multiple accept=".pdf,.docx" onChange={e => addFiles(e.target.files)} style={{ display: 'none' }} />
+            <input type="file" multiple accept=".pdf,.docx,.pptx,.txt" onChange={e => addFiles(e.target.files)} style={{ display: 'none' }} />
           </label>
 
           {/* 파일 목록 */}
@@ -217,6 +218,12 @@ export default function UploadPage() {
               </span>
               <span style={{ padding: '4px 12px', background: '#EEF0FF', color: '#5E6AD2', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
                 DOCX
+              </span>
+              <span style={{ padding: '4px 12px', background: '#EEF0FF', color: '#5E6AD2', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
+                PPTX
+              </span>
+              <span style={{ padding: '4px 12px', background: '#EEF0FF', color: '#5E6AD2', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
+                TXT
               </span>
             </div>
             <p style={{ fontSize: 12, color: '#9CA3AF', marginTop: 12 }}>최대 파일 크기: 10MB</p>

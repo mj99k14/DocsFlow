@@ -1,14 +1,15 @@
 import pdfplumber
 import docx
+from pptx import Presentation
 from pathlib import Path
 import logging
 logging.getLogger("pdfplumber").setLevel(logging.ERROR)
 
-ALLOWED_EXTENSIONS = (".pdf", ".docx")
+ALLOWED_EXTENSIONS = (".pdf", ".docx", ".pptx", ".txt")
 
 def extract_text(file_path: str) -> str:
     """
-    PDF 또는 DOCX 파일에서 텍스트 추출
+    PDF / DOCX / PPTX / TXT 파일에서 텍스트 추출
 
     Args:
         file_path: 파일 경로
@@ -23,6 +24,10 @@ def extract_text(file_path: str) -> str:
         return _extract_from_pdf(file_path)
     elif file_path.endswith(".docx"):
         return _extract_from_docx(file_path)
+    elif file_path.endswith(".pptx"):
+        return _extract_from_pptx(file_path)
+    elif file_path.endswith(".txt"):
+        return _extract_from_txt(file_path)
     else:
         raise ValueError(f"지원하지 않는 파일 형식입니다. 지원 형식: {', '.join(ALLOWED_EXTENSIONS)}")
 
@@ -56,6 +61,39 @@ def _extract_from_docx(file_path: str) -> str:
 
     if not text.strip():
         raise ValueError("텍스트를 추출할 수 없습니다. 빈 문서일 수 있습니다")
+    return text.strip()
+
+
+def _extract_from_pptx(file_path: str) -> str:
+    try:
+        prs = Presentation(file_path)
+        lines = []
+        for i, slide in enumerate(prs.slides):
+            slide_texts = [shape.text for shape in slide.shapes if shape.has_text_frame and shape.text.strip()]
+            if slide_texts:
+                lines.append(f"[슬라이드 {i + 1}]")
+                lines.extend(slide_texts)
+        text = "\n".join(lines)
+    except Exception as e:
+        raise Exception(f"PPTX 텍스트 추출 실패: {str(e)}")
+
+    if not text.strip():
+        raise ValueError("텍스트를 추출할 수 없습니다. 빈 프레젠테이션일 수 있습니다")
+    return text.strip()
+
+
+def _extract_from_txt(file_path: str) -> str:
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except UnicodeDecodeError:
+        with open(file_path, "r", encoding="cp949") as f:
+            text = f.read()
+    except Exception as e:
+        raise Exception(f"TXT 텍스트 추출 실패: {str(e)}")
+
+    if not text.strip():
+        raise ValueError("텍스트를 추출할 수 없습니다. 빈 파일일 수 있습니다")
     return text.strip()
 
 

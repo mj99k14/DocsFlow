@@ -196,6 +196,8 @@ export default function Dashboard() {
               <option value="ALL">전체 형식</option>
               <option value=".pdf">PDF</option>
               <option value=".docx">DOCX</option>
+              <option value=".pptx">PPTX</option>
+              <option value=".txt">TXT</option>
             </select>
             {/* 부서 필터 */}
             <select
