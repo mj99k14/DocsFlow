@@ -76,7 +76,7 @@ def process_document(document_id: int, file_path: str):
         if threshold > 0.0 and confidence < threshold:
             from services.slack import send_rejected_notification
             print(f" 신뢰도 {int(confidence*100)}% < 임계값 {int(threshold*100)}% → 관리자 채널로 전송")
-            send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", department_name)
+            send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", department_name, departments=department_names)
         else:
             webhook_url = department.webhook_url if department else None
             send_slack_notification(document_id, document.file_name, ai_result, webhook_url=webhook_url)

@@ -104,7 +104,20 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict, w
     return True
 
 
-def send_rejected_notification(document_id: int, file_name: str, rejected_by: str, original_department: str, analysis=None):
+def _build_reroute_buttons(document_id: int, departments: list[str]) -> list[dict]:
+    """부서 목록으로 재분류 버튼 생성 (Slack 제한: actions 블록당 최대 5개)"""
+    return [
+        {
+            "type": "button",
+            "text": {"type": "plain_text", "text": dept, "emoji": True},
+            "value": f"{document_id}|{dept}",
+            "action_id": f"reroute_{i}",
+        }
+        for i, dept in enumerate(departments[:5])  # Slack 버튼 최대 5개
+    ]
+
+
+def send_rejected_notification(document_id: int, file_name: str, rejected_by: str, original_department: str, analysis=None, departments: list[str] = None):
     """반려 시 관리자 채널로 재분류 요청 알림 전송"""
     if not WEBHOOK_ADMIN:
         print(" 관리자 Webhook URL이 설정되지 않았습니다")
@@ -146,38 +159,17 @@ def send_rejected_notification(document_id: int, file_name: str, rejected_by: st
                 }
             },
             {"type": "divider"},
-            # 재분류 버튼
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "⚖️ 법무팀", "emoji": True},
-                        "value": f"{document_id}|법무팀",
-                        "action_id": "reroute_legal"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "💰 재무팀", "emoji": True},
-                        "value": f"{document_id}|재무팀",
-                        "action_id": "reroute_finance"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "👥 인사팀", "emoji": True},
-                        "value": f"{document_id}|인사팀",
-                        "action_id": "reroute_hr"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "📊 경영기획팀", "emoji": True},
-                        "value": f"{document_id}|경영기획팀",
-                        "action_id": "reroute_planning"
-                    },
-                ]
-            }
         ]
     }
+
+    if departments:
+        buttons = _build_reroute_buttons(document_id, departments)
+        if buttons:
+            message["blocks"].append({
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
+            })
+            message["blocks"].append({"type": "actions", "elements": buttons})
 
     response = requests.post(WEBHOOK_ADMIN, json=message)
     if response.status_code != 200:
@@ -290,7 +282,7 @@ def send_human_rejected_notification(document_id: int, file_name: str, rejected_
     return True
 
 
-def send_held_notification(document_id: int, file_name: str, held_by: str, analysis=None):
+def send_held_notification(document_id: int, file_name: str, held_by: str, analysis=None, departments: list[str] = None):
     """보류 시 관리자 채널로 알림 전송"""
     if not WEBHOOK_ADMIN:
         print(" 관리자 Webhook URL이 설정되지 않았습니다")
@@ -332,41 +324,17 @@ def send_held_notification(document_id: int, file_name: str, held_by: str, analy
                 }
             },
             {"type": "divider"},
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
-            },
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "⚖️ 법무팀", "emoji": True},
-                        "value": f"{document_id}|법무팀",
-                        "action_id": "reroute_legal"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "💰 재무팀", "emoji": True},
-                        "value": f"{document_id}|재무팀",
-                        "action_id": "reroute_finance"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "👥 인사팀", "emoji": True},
-                        "value": f"{document_id}|인사팀",
-                        "action_id": "reroute_hr"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "📊 경영기획팀", "emoji": True},
-                        "value": f"{document_id}|경영기획팀",
-                        "action_id": "reroute_planning"
-                    },
-                ]
-            }
         ]
     }
+
+    if departments:
+        buttons = _build_reroute_buttons(document_id, departments)
+        if buttons:
+            message["blocks"].append({
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
+            })
+            message["blocks"].append({"type": "actions", "elements": buttons})
 
     response = requests.post(WEBHOOK_ADMIN, json=message)
     if response.status_code != 200:
