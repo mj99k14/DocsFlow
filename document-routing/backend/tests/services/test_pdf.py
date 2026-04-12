@@ -14,11 +14,11 @@ def test_file_not_found():
 
 
 def test_non_pdf_file(tmp_path):
-    """PDF가 아닌 파일(.txt)을 전달하면 ValueError가 발생한다."""
-    txt_file = tmp_path / "document.txt"
-    txt_file.write_text("텍스트 내용")
-    with pytest.raises(ValueError, match="PDF 파일만 지원합니다"):
-        extract_text_from_pdf(str(txt_file))
+    """지원하지 않는 확장자(.hwp)를 전달하면 ValueError가 발생한다."""
+    hwp_file = tmp_path / "document.hwp"
+    hwp_file.write_bytes(b"HWP fake content")
+    with pytest.raises(ValueError, match="지원하지 않는 파일 형식"):
+        extract_text_from_pdf(str(hwp_file))
 
 
 def test_successful_text_extraction(tmp_path):

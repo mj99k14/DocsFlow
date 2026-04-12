@@ -111,32 +111,37 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
         if response_url:
             update_slack_message(response_url, action_type.value, user_name)
 
-        # 반려 시 관리자 채널로 재분류 요청
+        # 반려 시 관리자 채널로 재분류 요청 (이미 재분류된 적 있으면 생략)
         if action_type == ActionType.REJECTED:
-            analysis = db.query(AnalysisResult).filter(
-                AnalysisResult.document_id == document_id
-            ).first()
-            original_department = "미확인"
-
-            # 분석결과에서 추천 부서 가져오기
-            from models import DocumentDepartment, Department
-            doc_dept = db.query(DocumentDepartment).join(AnalysisResult).filter(
-                AnalysisResult.document_id == document_id
+            already_rerouted = db.query(ApprovalHistory).filter(
+                ApprovalHistory.document_id == document_id,
+                ApprovalHistory.approved_by.like("%(재분류→%"),
             ).first()
 
-            if doc_dept:
-                dept = db.query(Department).filter(
-                    Department.id == doc_dept.department_id
+            if not already_rerouted:
+                analysis = db.query(AnalysisResult).filter(
+                    AnalysisResult.document_id == document_id
                 ).first()
-                original_department = dept.name if dept else "미확인"
+                original_department = "미확인"
 
-            send_rejected_notification(
-                document_id,
-                document.file_name,
-                user_name,
-                original_department,
-                analysis,
-            )
+                from models import DocumentDepartment, Department
+                doc_dept = db.query(DocumentDepartment).join(AnalysisResult).filter(
+                    AnalysisResult.document_id == document_id
+                ).first()
+
+                if doc_dept:
+                    dept = db.query(Department).filter(
+                        Department.id == doc_dept.department_id
+                    ).first()
+                    original_department = dept.name if dept else "미확인"
+
+                send_rejected_notification(
+                    document_id,
+                    document.file_name,
+                    user_name,
+                    original_department,
+                    analysis,
+                )
 
         # 보류 시 관리자 채널 알림
         if action_type == ActionType.HELD:
@@ -182,12 +187,9 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
             "confidence":    0.0
         }
 
-        # 상태 다시 PENDING으로
-        document.status = StatusType.PENDING
+        # 상태 COMPLETED 유지 (AI 분석은 이미 완료됨, 부서만 변경)
+        document.status = StatusType.COMPLETED
         db.commit()
-
-        # 새 부서 채널로 재전송
-        send_slack_notification(document_id, document.file_name, ai_result)
 
         # 재분류 이력 저장
         approval = ApprovalHistory(
@@ -197,6 +199,12 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
         )
         db.add(approval)
         db.commit()
+
+        # 새 부서 채널로 재전송
+        from models import Department
+        dept = db.query(Department).filter(Department.name == new_department).first()
+        webhook_url = dept.webhook_url if dept else None
+        send_slack_notification(document_id, document.file_name, ai_result, webhook_url=webhook_url)
 
         print(f"문서 {document_id} 재분류 완료 → {new_department}")
 

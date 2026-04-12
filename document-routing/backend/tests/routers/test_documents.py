@@ -36,12 +36,12 @@ def test_upload_pdf_success(client):
 
 
 def test_upload_non_pdf_fails(client):
-    """.docx 파일 업로드 시 400 Bad Request를 반환하는지 확인."""
-    docx_bytes = io.BytesIO(b"PK fake docx content")
+    """지원하지 않는 확장자(.hwp) 업로드 시 400 Bad Request를 반환하는지 확인."""
+    hwp_bytes = io.BytesIO(b"HWP fake content")
 
     response = client.post(
         "/documents/upload",
-        files={"file": ("report.docx", docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+        files={"file": ("report.hwp", hwp_bytes, "application/octet-stream")},
     )
 
     assert response.status_code == 400, (
