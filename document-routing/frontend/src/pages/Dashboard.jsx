@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [searchText, setSearchText] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [filterDept, setFilterDept] = useState('ALL')
+  const [filterType, setFilterType] = useState('ALL')
   const [hideApproved, setHideApproved] = useState(true)
   const [error, setError] = useState(null)
   const [page, setPage] = useState(1)
@@ -63,8 +64,9 @@ export default function Dashboard() {
     const matchSearch = doc.file_name.toLowerCase().includes(searchText.toLowerCase())
     const matchStatus = filterStatus === 'ALL' || doc.status === filterStatus
     const matchDept = filterDept === 'ALL' || deptName === filterDept
+    const matchType = filterType === 'ALL' || doc.file_name.toLowerCase().endsWith(filterType.toLowerCase())
     const matchHide = !hideApproved || doc.status !== 'APPROVED'
-    return matchSearch && matchStatus && matchDept && matchHide
+    return matchSearch && matchStatus && matchDept && matchType && matchHide
   })
 
   const analyzed = documents.filter(d => d.analysis?.departments?.[0]?.confidence)
@@ -184,6 +186,16 @@ export default function Dashboard() {
               <option value="APPROVED">승인됨</option>
               <option value="REJECTED">반려</option>
               <option value="HELD">보류</option>
+            </select>
+            {/* 파일 형식 필터 */}
+            <select
+              value={filterType}
+              onChange={e => setFilterType(e.target.value)}
+              style={{ height: 34, padding: '0 10px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, color: '#374151', background: '#FAFAFA', cursor: 'pointer', outline: 'none' }}
+            >
+              <option value="ALL">전체 형식</option>
+              <option value=".pdf">PDF</option>
+              <option value=".docx">DOCX</option>
             </select>
             {/* 부서 필터 */}
             <select
