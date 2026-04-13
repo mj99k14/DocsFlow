@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_URL = 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export const getDocuments = (page = 1, size = 20) =>
   axios.get(`${API_URL}/documents/`, { params: { page, size } }).then(r => r.data)
@@ -37,6 +37,7 @@ export const updateDepartment = (id, data, pin) => axios.put(`${API_URL}/departm
 export const createDepartment = (data, pin) => axios.post(`${API_URL}/departments/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const deleteDepartment = (id, pin) => axios.delete(`${API_URL}/departments/${id}`, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
+export const getSlackChannels = () => axios.get(`${API_URL}/slack/channels`).then(r => r.data)
 
 export const retryDocument = (id) =>
   axios.post(`${API_URL}/documents/${id}/retry`).then(r => r.data)
