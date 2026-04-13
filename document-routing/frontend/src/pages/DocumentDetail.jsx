@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw, Trash2 } from 'lucide-react'
 import { getDocument, getDocumentHistory, getDepartments, getFileUrl, retryDocument, deleteDocument } from '../services/api.js'
@@ -35,8 +35,9 @@ export default function DocumentDetail() {
   const [deletePin, setDeletePin] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const pollingRef = useRef(null)
 
-  useEffect(() => {
+  const load = () => {
     Promise.all([getDocument(id), getDocumentHistory(id), getDepartments()])
       .then(([d, h, depts]) => {
         setDoc(d); setHistory(h)
@@ -46,6 +47,12 @@ export default function DocumentDetail() {
       })
       .catch(console.error)
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    load()
+    pollingRef.current = setInterval(load, 5000)
+    return () => clearInterval(pollingRef.current)
   }, [id])
 
   const handleDelete = async () => {
@@ -126,7 +133,7 @@ export default function DocumentDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                 <Calendar size={11} color="#9CA3AF" />
                 <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                  {new Date(doc.created_at).toLocaleDateString('ko-KR')}
+                  {new Date(doc.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}
                 </span>
               </div>
             </div>
@@ -309,7 +316,7 @@ export default function DocumentDetail() {
                           </div>
                         </div>
                         <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                          {new Date(item.created_at).toLocaleString('ko-KR')}
+                          {new Date(item.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                         </span>
                       </div>
                     )
