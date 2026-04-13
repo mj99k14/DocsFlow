@@ -2,6 +2,8 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true'
+
 export const getDocuments = (page = 1, size = 20) =>
   axios.get(`${API_URL}/documents/`, { params: { page, size } }).then(r => r.data)
 export const getDocument = (id) => axios.get(`${API_URL}/documents/${id}`).then(r => r.data)
