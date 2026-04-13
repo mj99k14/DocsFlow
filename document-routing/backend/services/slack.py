@@ -6,10 +6,41 @@ load_dotenv()
 
 # 관리자 채널 Webhook URL
 WEBHOOK_ADMIN = os.getenv("SLACK_WEBHOOK_REJECT")
+SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 
-def send_slack_notification(document_id: int, file_name: str, ai_result: dict, webhook_url: str = None):
+def _post_message(channel: str, blocks: list) -> bool:
+    """Bot Token으로 Slack 채널에 메시지 전송"""
+    if not SLACK_BOT_TOKEN:
+        raise Exception("SLACK_BOT_TOKEN이 설정되지 않았습니다")
+    response = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        json={"channel": channel, "blocks": blocks},
+    )
+    data = response.json()
+    if not data.get("ok"):
+        raise Exception(f"Slack Bot 전송 실패: {data.get('error')}")
+    return True
+
+
+def get_slack_channels() -> list:
+    """Bot Token으로 워크스페이스 채널 목록 조회"""
+    if not SLACK_BOT_TOKEN:
+        return []
+    response = requests.get(
+        "https://slack.com/api/conversations.list",
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        params={"limit": 200, "exclude_archived": True},
+    )
+    data = response.json()
+    if not data.get("ok"):
+        return []
+    return [{"id": c["id"], "name": c["name"]} for c in data.get("channels", [])]
+
+
+def send_slack_notification(document_id: int, file_name: str, ai_result: dict, channel: str = None, webhook_url: str = None):
     """
     AI 분석 결과를 Slack으로 전송
     승인 / 반려 / 보류 버튼 포함
@@ -93,12 +124,14 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict, w
         ]
     }
 
-    if not webhook_url:
-        raise Exception("Slack Webhook URL이 설정되지 않았습니다")
-
-    response = requests.post(webhook_url, json=message)
-    if response.status_code != 200:
-        raise Exception(f"Slack 전송 실패: {response.status_code} {response.text}")
+    if channel and SLACK_BOT_TOKEN:
+        _post_message(channel, message["blocks"])
+    elif webhook_url:
+        response = requests.post(webhook_url, json=message)
+        if response.status_code != 200:
+            raise Exception(f"Slack 전송 실패: {response.status_code} {response.text}")
+    else:
+        raise Exception("Slack 채널 또는 Webhook URL이 필요합니다")
 
     print(f" Slack 알림 전송 완료 → {department} ({file_name})")
     return True
@@ -208,10 +241,10 @@ def update_slack_message(response_url: str, action_type: str, user_name: str):
         print(f" Slack 메시지 업데이트 실패: {response.status_code} {response.text}")
 
 
-def send_approved_notification(document_id: int, file_name: str, dept_name: str, approved_by: str, webhook_url: str = None):
+def send_approved_notification(document_id: int, file_name: str, dept_name: str, approved_by: str, channel: str = None, webhook_url: str = None):
     """웹에서 승인 시 해당 부서 채널로 승인 완료 알림 전송 (버튼 없음)"""
-    if not webhook_url:
-        raise Exception("Slack Webhook URL이 설정되지 않았습니다")
+    if not channel and not webhook_url:
+        raise Exception("Slack 채널 또는 Webhook URL이 필요합니다")
 
     message = {
         "blocks": [
@@ -237,9 +270,12 @@ def send_approved_notification(document_id: int, file_name: str, dept_name: str,
         ]
     }
 
-    response = requests.post(webhook_url, json=message)
-    if response.status_code != 200:
-        raise Exception(f"Slack 전송 실패: {response.status_code} {response.text}")
+    if channel and SLACK_BOT_TOKEN:
+        _post_message(channel, message["blocks"])
+    elif webhook_url:
+        response = requests.post(webhook_url, json=message)
+        if response.status_code != 200:
+            raise Exception(f"Slack 전송 실패: {response.status_code} {response.text}")
     print(f" 승인 알림 전송 완료 → {dept_name} ({file_name})")
 
 
