@@ -132,18 +132,25 @@ async def upload_document(
 def get_documents(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
+    search: str = Query(None),
     db: Session = Depends(get_db)
 ):
     offset = (page - 1) * size
-    return db.query(Document).options(
+    q = db.query(Document).options(
         selectinload(Document.analysis).selectinload(AnalysisResult.departments)
-    ).order_by(Document.created_at.desc()).offset(offset).limit(size).all()
+    )
+    if search:
+        q = q.filter(Document.file_name.ilike(f"%{search}%"))
+    return q.order_by(Document.created_at.desc()).offset(offset).limit(size).all()
 
 
 # ── 3. 문서 총 개수 조회 ─────────────────────────────────────
 @router.get("/count")
-def get_documents_count(db: Session = Depends(get_db)):
-    return {"total": db.query(Document).count()}
+def get_documents_count(search: str = Query(None), db: Session = Depends(get_db)):
+    q = db.query(Document)
+    if search:
+        q = q.filter(Document.file_name.ilike(f"%{search}%"))
+    return {"total": q.count()}
 
 
 # ── 3. 문서 상태 조회 ────────────────────────────────────────

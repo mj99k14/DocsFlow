@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [documents, setDocuments] = useState([])
   const [deptMap, setDeptMap] = useState({})
   const [searchText, setSearchText] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [filterDept, setFilterDept] = useState('ALL')
   const [filterType, setFilterType] = useState('ALL')
@@ -34,11 +35,20 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const pollingRef = useRef(null)
 
+  // 검색어 입력 후 300ms 뒤에 실제 API 검색 실행
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchText)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchText])
+
   const load = async () => {
     try {
       const [docs, countData] = await Promise.all([
-        getDocuments(page, PAGE_SIZE),
-        getDocumentsCount(),
+        getDocuments(page, PAGE_SIZE, debouncedSearch),
+        getDocumentsCount(debouncedSearch),
       ])
       setDocuments(docs)
       setTotal(countData.total)
@@ -57,16 +67,15 @@ export default function Dashboard() {
     }).catch(console.error)
     pollingRef.current = setInterval(load, 5000)
     return () => clearInterval(pollingRef.current)
-  }, [page])
+  }, [page, debouncedSearch])
 
   const filteredDocuments = documents.filter(doc => {
     const deptName = deptMap[doc.analysis?.departments?.[0]?.department_id] || ''
-    const matchSearch = doc.file_name.toLowerCase().includes(searchText.toLowerCase())
     const matchStatus = filterStatus === 'ALL' || doc.status === filterStatus
     const matchDept = filterDept === 'ALL' || deptName === filterDept
     const matchType = filterType === 'ALL' || doc.file_name.toLowerCase().endsWith(filterType.toLowerCase())
     const matchHide = !hideApproved || doc.status !== 'APPROVED'
-    return matchSearch && matchStatus && matchDept && matchType && matchHide
+    return matchStatus && matchDept && matchType && matchHide
   })
 
   const analyzed = documents.filter(d => d.analysis?.departments?.[0]?.confidence)
