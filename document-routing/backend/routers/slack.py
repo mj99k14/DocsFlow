@@ -47,8 +47,9 @@ async def slack_callback(
     response_url = payload.get("response_url", "")
     print(f" response_url: {response_url!r}")
 
-    # 재분류 버튼 처리 (reroute_*)
-    if action_id.startswith("reroute_"):
+    # 재분류 드롭다운 처리 (reroute_select)
+    if action_id == "reroute_select":
+        value = action.get("selected_option", {}).get("value", "")
         document_id, new_department = value.split("|")
         document_id = int(document_id)
         background_tasks.add_task(

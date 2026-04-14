@@ -137,17 +137,21 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict, c
     return True
 
 
-def _build_reroute_buttons(document_id: int, departments: list[str]) -> list[dict]:
-    """부서 목록으로 재분류 버튼 생성 (Slack 제한: actions 블록당 최대 5개)"""
-    return [
+def _build_reroute_select(document_id: int, departments: list[str]) -> dict:
+    """부서 목록으로 재분류 드롭다운 생성 (부서 수 제한 없음)"""
+    options = [
         {
-            "type": "button",
             "text": {"type": "plain_text", "text": dept, "emoji": True},
             "value": f"{document_id}|{dept}",
-            "action_id": f"reroute_{i}",
         }
-        for i, dept in enumerate(departments[:5])  # Slack 버튼 최대 5개
+        for dept in departments
     ]
+    return {
+        "type": "static_select",
+        "placeholder": {"type": "plain_text", "text": "재분류할 부서를 선택하세요", "emoji": True},
+        "options": options,
+        "action_id": "reroute_select",
+    }
 
 
 def send_rejected_notification(document_id: int, file_name: str, rejected_by: str, original_department: str, analysis=None, departments: list[str] = None):
@@ -196,13 +200,12 @@ def send_rejected_notification(document_id: int, file_name: str, rejected_by: st
     }
 
     if departments:
-        buttons = _build_reroute_buttons(document_id, departments)
-        if buttons:
-            message["blocks"].append({
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
-            })
-            message["blocks"].append({"type": "actions", "elements": buttons})
+        select = _build_reroute_select(document_id, departments)
+        message["blocks"].append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
+        })
+        message["blocks"].append({"type": "actions", "elements": [select]})
 
     response = requests.post(WEBHOOK_ADMIN, json=message)
     if response.status_code != 200:
@@ -364,13 +367,12 @@ def send_held_notification(document_id: int, file_name: str, held_by: str, analy
     }
 
     if departments:
-        buttons = _build_reroute_buttons(document_id, departments)
-        if buttons:
-            message["blocks"].append({
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
-            })
-            message["blocks"].append({"type": "actions", "elements": buttons})
+        select = _build_reroute_select(document_id, departments)
+        message["blocks"].append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": "부서를 선택해 재분류해 주세요."}
+        })
+        message["blocks"].append({"type": "actions", "elements": [select]})
 
     response = requests.post(WEBHOOK_ADMIN, json=message)
     if response.status_code != 200:
