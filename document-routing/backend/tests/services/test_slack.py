@@ -84,5 +84,5 @@ def test_send_approved_notification_success():
 
 def test_send_approved_notification_no_url_raises():
     """send_approved_notification에 webhook_url이 없으면 Exception이 발생한다."""
-    with pytest.raises(Exception, match="Slack Webhook URL"):
+    with pytest.raises(Exception, match="Slack 채널 또는 Webhook URL이 필요합니다"):
         send_approved_notification(1, "test.pdf", "법무팀", "관리자", webhook_url=None)
