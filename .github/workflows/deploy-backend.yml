@@ -19,7 +19,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: "1212"
-          POSTGRES_DB: document_routing_test
+          POSTGRES_DB: document_routing
         ports:
           - 5432:5432
         options: >-
@@ -40,6 +40,9 @@ jobs:
           cache-dependency-path: |
             document-routing/backend/requirements.txt
             document-routing/backend/requirements-test.txt
+
+      - name: 테스트 DB 생성
+        run: PGPASSWORD=1212 psql -h localhost -U postgres -c "CREATE DATABASE document_routing_test;"
 
       - name: 의존성 설치
         working-directory: document-routing/backend
