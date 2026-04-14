@@ -3,12 +3,19 @@ from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from database import sessionLocal
 from models import Document, AnalysisResult, ApprovalHistory, StatusType, ActionType
-from services.slack import send_rejected_notification, send_slack_notification, update_slack_message, send_held_notification
+from services.slack import send_rejected_notification, send_slack_notification, update_slack_message, send_held_notification, get_slack_channels
 
 router = APIRouter(
     prefix="/slack",
     tags=["slack"]
 )
+
+
+# ── Slack 채널 목록 조회 ─────────────────────────────────────
+@router.get("/channels")
+def list_slack_channels():
+    """워크스페이스의 Slack 채널 목록 반환"""
+    return get_slack_channels()
 
 
 # ── Slack Callback 처리 ──────────────────────────────────────
@@ -209,8 +216,9 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
         # 새 부서 채널로 재전송
         from models import Department
         dept = db.query(Department).filter(Department.name == new_department).first()
+        channel = dept.slack_channel if dept else None
         webhook_url = dept.webhook_url if dept else None
-        send_slack_notification(document_id, document.file_name, ai_result, webhook_url=webhook_url)
+        send_slack_notification(document_id, document.file_name, ai_result, channel=channel, webhook_url=webhook_url)
 
         print(f"문서 {document_id} 재분류 완료 → {new_department}")
 

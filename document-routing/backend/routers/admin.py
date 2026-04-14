@@ -47,7 +47,11 @@ def get_settings(db: Session = Depends(get_db), _=Depends(verify_admin)):
 @router.patch("/settings")
 def update_settings(data: SettingsUpdate, db: Session = Depends(get_db), _=Depends(verify_admin)):
     settings = db.query(SystemSettings).first()
-    settings.confidence_threshold = data.confidence_threshold
+    if not settings:
+        settings = SystemSettings(confidence_threshold=data.confidence_threshold)
+        db.add(settings)
+    else:
+        settings.confidence_threshold = data.confidence_threshold
     db.commit()
     return {"confidence_threshold": settings.confidence_threshold}
 
