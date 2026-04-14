@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, CheckCircle, Clock, TrendingUp, ArrowUpRight, Search, X } from 'lucide-react'
 import { getDocuments, getDepartments, getDocumentsCount } from '../services/api.js'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -20,6 +21,7 @@ const STATUS_BADGE = {
 }
 
 export default function Dashboard() {
+  const isMobile = useIsMobile()
   const [documents, setDocuments] = useState([])
   const [deptMap, setDeptMap] = useState({})
   const [searchText, setSearchText] = useState('')
@@ -119,7 +121,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div style={{ padding: 32, height: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ padding: isMobile ? 16 : 32, height: '100%', display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24 }}>
 
       {/* 에러 배너 */}
       {error && (
@@ -137,7 +139,7 @@ export default function Dashboard() {
       </div>
 
       {/* 통계 카드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 10 : 16 }}>
         {stats.map(({ label, value, icon: Icon, iconBg, iconColor, sub }) => (
           <Card key={label} style={{ padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -166,9 +168,9 @@ export default function Dashboard() {
             </div>
             <span style={{ fontSize: 13, color: '#9CA3AF' }}>{filteredDocuments.length}/{documents.length}건</span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: isMobile ? 'auto' : 'visible', flexWrap: isMobile ? 'nowrap' : 'wrap', paddingBottom: isMobile ? 4 : 0 }}>
             {/* 검색 */}
-            <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 160, maxWidth: isMobile ? 200 : 260 }}>
               <Search size={14} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 value={searchText}
@@ -240,11 +242,11 @@ export default function Dashboard() {
           <Table>
             <TableHeader>
               <TableRow style={{ background: '#FAFAFA' }}>
-                <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600, paddingLeft: 24 }}>파일명</TableHead>
-                <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600 }}>업로드 날짜</TableHead>
-                <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600 }}>AI 추천 부서</TableHead>
+                <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600, paddingLeft: isMobile ? 12 : 24 }}>파일명</TableHead>
+                {!isMobile && <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600 }}>업로드 날짜</TableHead>}
+                {!isMobile && <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600 }}>AI 추천 부서</TableHead>}
                 <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600 }}>처리 상태</TableHead>
-                <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600, textAlign: 'right', paddingRight: 24 }}>작업</TableHead>
+                {!isMobile && <TableHead style={{ color: '#6B7280', fontSize: 12, fontWeight: 600, textAlign: 'right', paddingRight: 24 }}>작업</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -270,42 +272,48 @@ export default function Dashboard() {
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/document/${doc.id}`)}
                     >
-                      <TableCell style={{ paddingLeft: 24 }}>
+                      <TableCell style={{ paddingLeft: isMobile ? 12 : 24 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: '#EEF0FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <FileText size={15} color="#5E6AD2" />
                           </div>
-                          <span style={{ fontSize: 14, fontWeight: 500, color: '#111827', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: '#111827', maxWidth: isMobile ? 140 : 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {doc.file_name}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell style={{ fontSize: 13, color: '#6B7280' }}>
-                        {new Date(doc.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
-                      </TableCell>
-                      <TableCell>
-                        {deptName ? (
-                          <Badge variant="outline" style={{ background: '#F0F4FF', border: '1px solid #C7D2FE', color: '#4F46E5', fontSize: 12 }}>
-                            {deptName}
-                          </Badge>
-                        ) : (
-                          <span style={{ fontSize: 13, color: '#D1D5DB' }}>분석 중</span>
-                        )}
-                      </TableCell>
+                      {!isMobile && (
+                        <TableCell style={{ fontSize: 13, color: '#6B7280' }}>
+                          {new Date(doc.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                        </TableCell>
+                      )}
+                      {!isMobile && (
+                        <TableCell>
+                          {deptName ? (
+                            <Badge variant="outline" style={{ background: '#F0F4FF', border: '1px solid #C7D2FE', color: '#4F46E5', fontSize: 12 }}>
+                              {deptName}
+                            </Badge>
+                          ) : (
+                            <span style={{ fontSize: 13, color: '#D1D5DB' }}>분석 중</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge className={badge.className} style={{ fontSize: 12 }}>{badge.label}</Badge>
                       </TableCell>
-                      <TableCell style={{ textAlign: 'right', paddingRight: 24 }}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 text-gray-500 hover:text-gray-900"
-                          onClick={e => { e.stopPropagation(); navigate(`/document/${doc.id}`) }}
-                        >
-                          상세 보기
-                          <ArrowUpRight size={13} />
-                        </Button>
-                      </TableCell>
+                      {!isMobile && (
+                        <TableCell style={{ textAlign: 'right', paddingRight: 24 }}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 text-gray-500 hover:text-gray-900"
+                            onClick={e => { e.stopPropagation(); navigate(`/document/${doc.id}`) }}
+                          >
+                            상세 보기
+                            <ArrowUpRight size={13} />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   )
                 })

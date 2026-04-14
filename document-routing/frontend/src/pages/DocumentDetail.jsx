@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw, Trash2 } from 'lucide-react'
 import { getDocument, getDocumentHistory, getDepartments, downloadFile, retryDocument, deleteDocument } from '../services/api.js'
 import { toast } from 'sonner'
@@ -101,6 +102,7 @@ export default function DocumentDetail() {
     </div>
   )
 
+  const isMobile = useIsMobile()
   const conf = doc.analysis?.departments?.[0]?.confidence || 0
   const deptId = doc.analysis?.departments?.[0]?.department_id
   const deptName = deptMap[deptId] || '미확인'
@@ -110,10 +112,14 @@ export default function DocumentDetail() {
 
       {/* 상단 헤더 바 */}
       <div style={{
-        padding: '16px 32px',
+        padding: isMobile ? '12px 16px' : '16px 32px',
         borderBottom: '1px solid #F3F4F6',
         background: '#fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        justifyContent: 'space-between',
+        gap: isMobile ? 10 : 0,
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -127,7 +133,7 @@ export default function DocumentDetail() {
               <span style={{ fontSize: 12, fontWeight: 700, color: '#5E6AD2' }}>PDF</span>
             </div>
             <div>
-              <p style={{ fontSize: 15, fontWeight: 600, color: '#111827', maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#111827', maxWidth: isMobile ? 200 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {doc.file_name}
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
@@ -139,7 +145,7 @@ export default function DocumentDetail() {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Badge className={badge.className}>{badge.label}</Badge>
           {doc.status === 'FAILED' && (
             doc.retry_count >= 3 ? (
@@ -220,8 +226,8 @@ export default function DocumentDetail() {
       )}
 
       {/* 본문 */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 32 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, height: '100%' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: isMobile ? 16 : 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: 24 }}>
 
           {/* 왼쪽 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

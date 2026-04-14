@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { Upload, FileText, X, CheckCircle } from 'lucide-react'
 import { uploadDocument } from '../services/api.js'
 import { Button } from '@/components/ui/button'
@@ -7,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
 
 export default function UploadPage() {
+  const isMobile = useIsMobile()
   const [files, setFiles] = useState([])
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -65,7 +67,7 @@ export default function UploadPage() {
   }
 
   return (
-    <div style={{ padding: 32, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: isMobile ? 16 : 32, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* 헤더 */}
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 600, color: '#111827' }}>문서 업로드</h2>
@@ -74,8 +76,8 @@ export default function UploadPage() {
         </p>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-        {/* 왼쪽 - 업로드 영역 */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24, minHeight: 0 }}>
+        {/* 업로드 영역 */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* 드래그 영역 */}
           <label
@@ -182,8 +184,8 @@ export default function UploadPage() {
           )}
         </div>
 
-        {/* 오른쪽 - 안내 */}
-        <div style={{ width: 280, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* 안내 */}
+        <div style={{ width: isMobile ? '100%' : 280, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Card style={{ padding: 24, background: '#F5F3FF', border: '1px solid #DDD6FE' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#5E6AD2', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
               AI 자동 분류 프로세스

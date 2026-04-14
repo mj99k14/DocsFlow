@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { FileText, LayoutDashboard, Upload, Settings, Bell } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
+import { useIsMobile } from './hooks/useIsMobile'
 import Dashboard from './pages/Dashboard.jsx'
 import DocumentDetail from './pages/DocumentDetail.jsx'
 import UploadPage from './pages/Upload.jsx'
@@ -8,7 +9,7 @@ import SettingsPage from './pages/Settings.jsx'
 
 const NAV = [
   { path: '/',         label: '대시보드',    icon: LayoutDashboard },
-  { path: '/upload',   label: '문서 업로드', icon: Upload },
+  { path: '/upload',   label: '업로드',      icon: Upload },
   { path: '/settings', label: '설정',        icon: Settings },
 ]
 
@@ -44,14 +45,12 @@ function Sidebar() {
         </div>
       </div>
 
-      {/* 섹션 레이블 */}
       <div style={{ padding: '20px 16px 6px' }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: '#C4C4CF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           메뉴
         </span>
       </div>
 
-      {/* 네비게이션 */}
       <nav style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
         {NAV.map(({ path, label, icon: Icon }) => {
           const active = location.pathname === path
@@ -65,7 +64,6 @@ function Sidebar() {
                 background: active ? '#EEF0FF' : 'transparent',
                 color: active ? '#5E6AD2' : '#6B7280',
                 transition: 'all 0.15s',
-                position: 'relative',
               }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: 7,
@@ -89,12 +87,80 @@ function Sidebar() {
           )
         })}
       </nav>
-
     </aside>
   )
 }
 
+function BottomNav() {
+  const location = useLocation()
+  return (
+    <nav style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      height: 60, background: '#fff',
+      borderTop: '1px solid #EBEBEB',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+      zIndex: 100,
+      paddingBottom: 'env(safe-area-inset-bottom)',
+    }}>
+      {NAV.map(({ path, label, icon: Icon }) => {
+        const active = location.pathname === path
+        return (
+          <NavLink key={path} to={path} style={{ textDecoration: 'none', flex: 1 }}>
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              color: active ? '#5E6AD2' : '#9CA3AF',
+            }}>
+              <Icon size={22} />
+              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500 }}>{label}</span>
+            </div>
+          </NavLink>
+        )
+      })}
+    </nav>
+  )
+}
+
 function Header() {
+  const location = useLocation()
+  const title = PAGE_TITLES[location.pathname] || '문서 상세'
+
+  return (
+    <header style={{
+      background: '#fff',
+      borderBottom: '1px solid #EBEBEB',
+      padding: '0 16px',
+      height: 52,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      flexShrink: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{
+          width: 26, height: 26, borderRadius: 7,
+          background: 'linear-gradient(135deg, #5E6AD2, #818CF8)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <FileText size={13} color="#fff" />
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{title}</span>
+      </div>
+      <button style={{
+        width: 34, height: 34, borderRadius: 8,
+        border: '1px solid #EBEBEB', background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', position: 'relative',
+      }}>
+        <Bell size={15} color="#6B7280" />
+        <span style={{
+          position: 'absolute', top: 7, right: 7,
+          width: 6, height: 6, borderRadius: '50%',
+          background: '#5E6AD2', border: '1.5px solid #fff',
+        }} />
+      </button>
+    </header>
+  )
+}
+
+function DesktopHeader() {
   const location = useLocation()
   const title = PAGE_TITLES[location.pathname] || '문서 상세'
 
@@ -107,34 +173,50 @@ function Header() {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       flexShrink: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{title}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button style={{
-          width: 34, height: 34, borderRadius: 8,
-          border: '1px solid #EBEBEB', background: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', position: 'relative',
-        }}>
-          <Bell size={15} color="#6B7280" />
-          <span style={{
-            position: 'absolute', top: 7, right: 7,
-            width: 6, height: 6, borderRadius: '50%',
-            background: '#5E6AD2', border: '1.5px solid #fff',
-          }} />
-        </button>
-      </div>
+      <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{title}</span>
+      <button style={{
+        width: 34, height: 34, borderRadius: 8,
+        border: '1px solid #EBEBEB', background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', position: 'relative',
+      }}>
+        <Bell size={15} color="#6B7280" />
+        <span style={{
+          position: 'absolute', top: 7, right: 7,
+          width: 6, height: 6, borderRadius: '50%',
+          background: '#5E6AD2', border: '1.5px solid #fff',
+        }} />
+      </button>
     </header>
   )
 }
 
 function Layout() {
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', background: '#F7F8F9' }}>
+        <Header />
+        <main style={{ flex: 1, overflowY: 'auto', background: '#F7F8F9', paddingBottom: 60 }}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/document/:id" element={<DocumentDetail />} />
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </main>
+        <BottomNav />
+        <Toaster />
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: '#F7F8F9' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-        <Header />
+        <DesktopHeader />
         <main style={{ flex: 1, overflowY: 'auto', background: '#F7F8F9' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />

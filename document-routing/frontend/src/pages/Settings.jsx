@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck, Sparkles, BarChart2, Trash2 } from 'lucide-react'
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals, getSlackChannels } from '../services/api.js'
 import { toast } from 'sonner'
@@ -68,6 +69,7 @@ function StyledInput({ value, onChange, placeholder, style, autoFocus, onKeyDown
 
 
 export default function Settings() {
+  const isMobile = useIsMobile()
   const [adminVerified, setAdminVerified] = useState(false)
   const [pin, setPin] = useState('')
   const [verifiedPin, setVerifiedPin] = useState('')
@@ -213,7 +215,7 @@ export default function Settings() {
   }
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ padding: isMobile ? '16px' : '28px 32px', maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* 페이지 헤더 */}
       <div style={{ marginBottom: 4 }}>
@@ -440,7 +442,7 @@ export default function Settings() {
       <Card>
         <SectionHeader type="stats" title="시스템 현황" desc="문서 처리 통계 (읽기 전용)" />
         {stats ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 12 }}>
             {[
               { label: '전체 문서', value: stats.total, color: '#111827' },
               { label: '승인', value: stats.approved, color: '#059669' },
