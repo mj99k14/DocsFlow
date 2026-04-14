@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw, Trash2 } from 'lucide-react'
-import { getDocument, getDocumentHistory, getDepartments, getFileUrl, retryDocument, deleteDocument } from '../services/api.js'
+import { getDocument, getDocumentHistory, getDepartments, downloadFile, retryDocument, deleteDocument } from '../services/api.js'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -158,12 +158,10 @@ export default function DocumentDetail() {
               </Button>
             )
           )}
-          <a href={getFileUrl(doc.id)} target="_blank" rel="noreferrer">
-            <Button variant="outline" size="sm" style={{ gap: 6 }}>
-              <Download size={14} />
-              다운로드
-            </Button>
-          </a>
+          <Button variant="outline" size="sm" style={{ gap: 6 }} onClick={() => downloadFile(doc.id, doc.file_name)}>
+            <Download size={14} />
+            다운로드
+          </Button>
           <Button
             variant="outline"
             size="sm"

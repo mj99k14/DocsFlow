@@ -39,6 +39,16 @@ export const updateDepartment = (id, data, pin) => axios.put(`${API_URL}/departm
 export const createDepartment = (data, pin) => axios.post(`${API_URL}/departments/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const deleteDepartment = (id, pin) => axios.delete(`${API_URL}/departments/${id}`, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 export const getFileUrl = (id) => `${API_URL}/documents/${id}/file`
+
+export const downloadFile = (id, fileName) =>
+  axios.get(`${API_URL}/documents/${id}/file`, { responseType: 'blob' }).then(r => {
+    const url = URL.createObjectURL(r.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
+  })
 export const getSlackChannels = () => axios.get(`${API_URL}/slack/channels`).then(r => r.data)
 
 export const retryDocument = (id) =>
