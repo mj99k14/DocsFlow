@@ -6,5 +6,7 @@ python-dotenv
 python-multipart
 anthropic
 pdfplumber
+python-docx
+python-pptx
 requests
 apscheduler
