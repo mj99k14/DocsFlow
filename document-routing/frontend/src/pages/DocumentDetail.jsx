@@ -314,7 +314,7 @@ export default function DocumentDetail() {
                           </div>
                         </div>
                         <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                          {new Date(item.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                          {new Date(item.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })}
                         </span>
                       </div>
                     )
