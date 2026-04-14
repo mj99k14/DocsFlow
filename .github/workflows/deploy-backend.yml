@@ -72,11 +72,10 @@ jobs:
             --instance-ids "i-06dd782d72c1cda6b" \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "set -e",
               "cd /home/ec2-user/DocsFlow && git pull origin main",
-              "cd document-routing/backend && pip install -r requirements.txt --quiet",
-              "sudo systemctl restart docsflow",
-              "sudo systemctl is-active docsflow && echo 배포완료"
+              "cd /home/ec2-user/DocsFlow/document-routing/backend && pip install -r requirements.txt --quiet",
+              "systemctl restart docsflow",
+              "systemctl is-active docsflow && echo 배포완료"
             ]' \
             --query "Command.CommandId" \
             --output text)
