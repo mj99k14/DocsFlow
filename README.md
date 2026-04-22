@@ -113,7 +113,7 @@ document-routing/
 <a name="한국어판"></a>
 
 <details>
-<summary>🇰🇷 한국어판을 읽む</summary>
+<summary>🇰🇷 한국어판</summary>
 
 <br>
 
