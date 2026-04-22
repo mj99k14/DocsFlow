@@ -20,59 +20,59 @@ function Sidebar() {
 
   return (
     <aside style={{
-      width: 220, flexShrink: 0, height: '100%',
+      width: 'clamp(220px, 16vw, 260px)', flexShrink: 0, height: '100%',
       background: '#FAFAFA',
       borderRight: '1px solid #EBEBEB',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* 로고 */}
       <div style={{
-        padding: '18px 16px 16px',
+        padding: '20px 18px 18px',
         borderBottom: '1px solid #EBEBEB',
-        display: 'flex', alignItems: 'center', gap: 10,
+        display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <div style={{
-          width: 34, height: 34, borderRadius: 10,
+          width: 'clamp(36px, 2.8vw, 42px)', height: 'clamp(36px, 2.8vw, 42px)', borderRadius: 11,
           background: 'linear-gradient(135deg, #5E6AD2, #818CF8)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0, boxShadow: '0 2px 8px rgba(94,106,210,0.35)',
         }}>
-          <FileText size={16} color="#fff" />
+          <FileText size={18} color="#fff" />
         </div>
         <div>
-          <div style={{ color: '#111827', fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em' }}>DocsFlow AI</div>
-          <div style={{ color: '#9CA3AF', fontSize: 11, marginTop: 1 }}>문서 분류 시스템</div>
+          <div style={{ color: '#111827', fontWeight: 700, fontSize: 'clamp(15px, 1.2vw, 17px)', letterSpacing: '-0.01em' }}>DocsFlow AI</div>
+          <div style={{ color: '#9CA3AF', fontSize: 'clamp(12px, 0.85vw, 13px)', marginTop: 2 }}>문서 분류 시스템</div>
         </div>
       </div>
 
-      <div style={{ padding: '20px 16px 6px' }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#C4C4CF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <div style={{ padding: '20px 18px 6px' }}>
+        <span style={{ fontSize: 'clamp(11px, 0.8vw, 12px)', fontWeight: 700, color: '#C4C4CF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           메뉴
         </span>
       </div>
 
-      <nav style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+      <nav style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
         {NAV.map(({ path, label, icon: Icon }) => {
           const active = location.pathname === path
           return (
             <NavLink key={path} to={path} style={{ textDecoration: 'none' }}>
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 9,
-                padding: '8px 10px', borderRadius: 8,
-                fontSize: 13, fontWeight: active ? 600 : 500,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 9,
+                fontSize: 'clamp(14px, 1.1vw, 16px)', fontWeight: active ? 600 : 500,
                 cursor: 'pointer',
                 background: active ? '#EEF0FF' : 'transparent',
                 color: active ? '#5E6AD2' : '#6B7280',
                 transition: 'all 0.15s',
               }}>
                 <div style={{
-                  width: 28, height: 28, borderRadius: 7,
+                  width: 'clamp(30px, 2.2vw, 34px)', height: 'clamp(30px, 2.2vw, 34px)', borderRadius: 8,
                   background: active ? '#fff' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   transition: 'all 0.15s',
                 }}>
-                  <Icon size={15} />
+                  <Icon size={17} />
                 </div>
                 {label}
                 {active && (
@@ -96,7 +96,7 @@ function BottomNav() {
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      height: 60, background: '#fff',
+      height: 'clamp(64px, 10vw, 76px)', background: '#fff',
       borderTop: '1px solid #EBEBEB',
       display: 'flex', alignItems: 'center', justifyContent: 'space-around',
       zIndex: 100,
@@ -107,11 +107,11 @@ function BottomNav() {
         return (
           <NavLink key={path} to={path} style={{ textDecoration: 'none', flex: 1 }}>
             <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               color: active ? '#5E6AD2' : '#9CA3AF',
             }}>
-              <Icon size={22} />
-              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500 }}>{label}</span>
+              <Icon size={26} />
+              <span style={{ fontSize: 'clamp(12px, 3.5vw, 14px)', fontWeight: active ? 700 : 500 }}>{label}</span>
             </div>
           </NavLink>
         )
@@ -129,30 +129,30 @@ function Header() {
       background: '#fff',
       borderBottom: '1px solid #EBEBEB',
       padding: '0 16px',
-      height: 52,
+      height: 'clamp(56px, 8vw, 64px)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       flexShrink: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
-          width: 26, height: 26, borderRadius: 7,
+          width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', borderRadius: 9,
           background: 'linear-gradient(135deg, #5E6AD2, #818CF8)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <FileText size={13} color="#fff" />
+          <FileText size={16} color="#fff" />
         </div>
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{title}</span>
+        <span style={{ fontSize: 'clamp(16px, 4.5vw, 20px)', fontWeight: 700, color: '#111827' }}>{title}</span>
       </div>
       <button style={{
-        width: 34, height: 34, borderRadius: 8,
+        width: 'clamp(36px, 8vw, 42px)', height: 'clamp(36px, 8vw, 42px)', borderRadius: 9,
         border: '1px solid #EBEBEB', background: '#fff',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer', position: 'relative',
       }}>
-        <Bell size={15} color="#6B7280" />
+        <Bell size={18} color="#6B7280" />
         <span style={{
-          position: 'absolute', top: 7, right: 7,
-          width: 6, height: 6, borderRadius: '50%',
+          position: 'absolute', top: 8, right: 8,
+          width: 7, height: 7, borderRadius: '50%',
           background: '#5E6AD2', border: '1.5px solid #fff',
         }} />
       </button>
@@ -168,22 +168,22 @@ function DesktopHeader() {
     <header style={{
       background: '#fff',
       borderBottom: '1px solid #EBEBEB',
-      padding: '0 24px',
-      height: 52,
+      padding: '0 28px',
+      height: 'clamp(54px, 4vw, 64px)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       flexShrink: 0,
     }}>
-      <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{title}</span>
+      <span style={{ fontSize: 'clamp(15px, 1.3vw, 18px)', fontWeight: 700, color: '#111827' }}>{title}</span>
       <button style={{
-        width: 34, height: 34, borderRadius: 8,
+        width: 'clamp(36px, 2.4vw, 42px)', height: 'clamp(36px, 2.4vw, 42px)', borderRadius: 9,
         border: '1px solid #EBEBEB', background: '#fff',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer', position: 'relative',
       }}>
-        <Bell size={15} color="#6B7280" />
+        <Bell size={17} color="#6B7280" />
         <span style={{
-          position: 'absolute', top: 7, right: 7,
-          width: 6, height: 6, borderRadius: '50%',
+          position: 'absolute', top: 8, right: 8,
+          width: 7, height: 7, borderRadius: '50%',
           background: '#5E6AD2', border: '1.5px solid #fff',
         }} />
       </button>
@@ -198,7 +198,7 @@ function Layout() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', background: '#F7F8F9' }}>
         <Header />
-        <main style={{ flex: 1, overflowY: 'auto', background: '#F7F8F9', paddingBottom: 60 }}>
+        <main style={{ flex: 1, overflowY: 'auto', background: '#F7F8F9', paddingBottom: 'clamp(64px, 10vw, 76px)' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/document/:id" element={<DocumentDetail />} />

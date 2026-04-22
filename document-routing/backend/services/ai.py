@@ -36,7 +36,7 @@ def _build_tools(department_names: list[str]) -> list:
                     "summary": {"type": "string"},
                     "keywords": {"type": "array", "items": {"type": "string"}},
                     "confidence": {"type": "number"},
-                    "reasoning": {"type": "string"},
+                    "reasoning": {"type": "string"},     
                 },
                 "required": ["document_type", "department", "summary", "keywords", "confidence", "reasoning"],
             },

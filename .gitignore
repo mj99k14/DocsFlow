@@ -16,3 +16,7 @@ document-routing/backend/uploaded_files/
 
 # Claude
 .claude/
+
+# SSH 키 (GitHub Actions용 로컬 키 파일)
+github_actions_key
+github_actions_key.pub

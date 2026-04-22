@@ -1,125 +1,94 @@
-# DocsFlow TODO
+# DocsFlow 프로젝트 진행 현황
 
 ---
 
-## ✅ 완료된 것
+## ✅ 완료된 기능
 
-- [x] PDF 업로드 + AI 분석 (Claude Tool Use)
-- [x] Slack 알림 전송 (승인/반려/보류 버튼 포함)
-- [x] Slack 버튼 클릭 → DB 상태 업데이트
-- [x] 관리자 PIN 인증 (설정 페이지)
-- [x] 부서별 Webhook URL DB 관리
-- [x] AI 신뢰도 임계값 설정 (미달 시 관리자 채널)
-- [x] 승인 완료 숨김 토글 (대시보드)
-- [x] 자동 삭제 — 승인 문서 30일 후 삭제 (APScheduler)
-- [x] 승인 내역 CSV 내보내기
-- [x] 시스템 현황 통계 카드
-- [x] 분석 실패 문서 재시도 (최대 3회 제한)
+### 백엔드 (FastAPI)
 
----
+#### 문서 처리
+- [x] PDF / DOCX 업로드 및 저장
+- [x] 파일 확장자 / 크기 검증
+- [x] 백그라운드 AI 분석 파이프라인 (BackgroundTasks)
+- [x] 분석 실패 시 FAILED 상태 처리
+- [x] 분석 재시도 (최대 3회)
+- [x] 문서 수동 삭제 (관리자 전용)
+- [x] 승인된 문서 30일 후 자동 삭제 (APScheduler)
 
-## 🔴 지금 당장 필요한 것
+#### AI 분석
+- [x] Claude API 연동 (tool_use 강제 → 구조화된 JSON 반환)
+- [x] DB 부서 목록 동적 전달 (AI가 실제 부서 기반으로 분류)
+- [x] 신뢰도 임계값 설정 및 저신뢰도 문서 관리자 채널 분리
 
-- [x] **DB 마이그레이션** — `retry_count` 컬럼 추가 완료
-- [x] **파일 없는 FAILED 문서 처리** — 재시도 시 파일 삭제된 경우 toast 에러 메시지 표시
-- [x] **대시보드 에러 표시** — API 실패 시 에러 배너 표시
+#### 부서 관리
+- [x] 부서 목록 조회
+- [x] 부서 추가 / 수정 (관리자 전용)
+- [x] Slack Webhook URL 부서별 관리
 
----
+#### 승인 워크플로우
+- [x] 승인 / 반려 / 보류 처리
+- [x] 승인 이력 저장 및 조회
+- [x] 승인 이력 CSV 내보내기
 
-## 🟡 기능 완성도
+#### Slack 연동
+- [x] AI 분석 완료 → 해당 부서 채널 알림 (승인/반려/보류 버튼 포함)
+- [x] 저신뢰도 → 관리자 채널 알림 `[AI 검토 필요]`
+- [x] 담당자 반려 → 관리자 채널 알림 `[반려됨]`
+- [x] 담당자 보류 → 관리자 채널 알림
+- [x] 담당자 승인 → 해당 부서 채널 알림
+- [x] Slack 버튼 클릭 → 메시지 교체 (버튼 제거)
 
-- [ ] **부서 삭제 기능** — 설정 페이지에 삭제 버튼 없음
-- [ ] **문서 수동 삭제** — 관리자가 특정 문서 삭제할 수 있어야 함
-- [ ] **대시보드 페이지네이션** — 문서 많아지면 느려짐 (현재 전체 조회)
-- [ ] **분류 부서 동적화** — AI가 DB 부서 목록 기반으로 분류 (현재 4개 하드코딩)
-- [ ] **스캔 PDF 지원** — OCR 연동 (이미지 기반 PDF는 현재 텍스트 추출 안 됨)
+#### 관리자
+- [x] PIN 인증 (헤더 기반)
+- [x] 신뢰도 임계값 조회 / 수정
+- [x] 통계 조회 (총 문서 수, 승인율 등)
 
----
+### 프론트엔드 (React)
 
-## 🔵 장기 / 서비스 확장
+#### 대시보드
+- [x] 문서 목록 테이블 (파일명, 상태, 추천 부서, 업로드 일시)
+- [x] 상태 뱃지 (대기중 / 분석중 / 승인 대기 / 승인됨 / 반려 / 보류 / 분석 실패)
+- [x] 5초 주기 폴링 (실시간 상태 갱신)
+- [x] 파일명 / 상태 / 부서 필터
+- [x] 승인됨 문서 숨기기 토글
+- [x] 페이지네이션 (20건 단위)
 
-- [ ] **로그인/인증** — 현재 PIN 하나로 전체 공유, 사용자별 권한 필요
-- [ ] **WebSocket** — 현재 5초 폴링 방식 → 실시간 업데이트로 전환
-- [ ] **Slack Bot Token** — 부서 추가 시 채널 자동 생성
-- [ ] **AI Agent 전환** — 단순 분류 → 다단계 추론, 문서 간 관계 분석
-- [ ] **배포** — 로컬 전용 → 서버 배포 (Render, Railway 등)
+#### 문서 업로드
+- [x] 드래그 앤 드롭 + 클릭 업로드
+- [x] PDF / DOCX 지원
+- [x] 중복 파일 / 10MB 초과 감지
+- [x] 업로드 진행 상태 표시
 
----
+#### 문서 상세
+- [x] AI 분석 결과 표시 (문서 유형, 요약, 키워드, 신뢰도, 판단 근거)
+- [x] 승인 / 반려 / 보류 버튼
+- [x] 원본 파일 다운로드
+- [x] 승인 이력 타임라인
 
-## 📚 3일 공부 계획
+#### 설정
+- [x] 관리자 PIN 인증
+- [x] 신뢰도 임계값 조회 / 수정
+- [x] 부서 목록 및 Webhook URL 관리
 
-> 각 날은 **개념 설명 → 코드 리뷰** 순서로 진행한다.
-> 이 프로젝트 코드를 직접 보면서 "왜 이렇게 썼는지"를 이해하는 것이 목표다.
-
----
-
-### Day 1 — 백엔드 핵심: DB와 API 구조
-
-**개념 설명**
-- [ ] **SQLAlchemy ORM** — DB를 Python 객체로 다루는 방법
-  - `Column`, `relationship`, `ForeignKey`, `cascade` 가 뭔지
-  - `db.query().filter().first()` 패턴이 SQL로 치면 뭔지
-  - `selectinload` — N+1 쿼리 문제가 뭔지, 왜 쓰는지
-- [ ] **FastAPI 구조**
-  - `APIRouter` — 왜 라우터를 파일로 분리하는지
-  - `Depends(get_db)` — 의존성 주입이 뭔지, 왜 쓰는지
-  - `BackgroundTasks` — 업로드 후 즉시 응답하는 이유
-- [ ] **Pydantic 스키마**
-  - `models.py` vs `schemas.py` — 둘이 왜 따로 있는지
-  - `from_attributes = True` 가 뭔지
-
-**코드 리뷰**
-- [ ] `database.py` — engine, sessionLocal, get_db() 흐름
-- [ ] `models.py` — Document → AnalysisResult → DocumentDepartment 관계
-- [ ] `routers/documents.py` — 업로드부터 AI 분석까지 전체 파이프라인
-
----
-
-### Day 2 — AI 연동과 비동기 처리
-
-**개념 설명**
-- [ ] **Claude Tool Use API**
-  - 일반 텍스트 응답 vs Tool Use 차이
-  - `tools`, `tool_choice` 파라미터가 하는 일
-  - `block.type == "tool_use"` 로 응답 파싱하는 이유
-- [ ] **환경변수 (.env)**
-  - API 키를 코드에 안 쓰는 이유
-  - `os.getenv()` / `dotenv` 동작 방식
-- [ ] **APScheduler**
-  - 30일 자동 삭제가 어떻게 돌아가는지
-  - `BackgroundScheduler` vs `cron` 표현식
-- [ ] **PostgreSQL 기본**
-  - JSONB 타입 — keywords 가 왜 JSONB로 저장되는지
-  - `ALTER TABLE` — 왜 create_all()로 컬럼 추가가 안 되는지
-
-**코드 리뷰**
-- [ ] `services/ai.py` — `_build_system_prompt`, `_build_tools`, `analyze_document` 흐름
-- [ ] `services/pdf.py` — PDF 텍스트 추출 방식
-- [ ] `services/slack.py` — Webhook 메시지 전송 구조
-- [ ] `main.py` — lifespan, 라우터 등록, CORS 설정
+### 테스트
+- [x] 백엔드 유닛 테스트 (services: ai, pdf, slack)
+- [x] 백엔드 통합 테스트 (routers: documents, departments)
+- [x] 프론트엔드 유닛 테스트 (Dashboard, Upload, DocumentDetail, api.js)
+- [x] 테스트 DB 격리 (트랜잭션 롤백 방식)
 
 ---
 
-### Day 3 — 프론트엔드: React + API 연동
+## 🔲 미완료 / 추후 과제
 
-**개념 설명**
-- [ ] **useState / useEffect**
-  - 상태가 바뀌면 왜 화면이 다시 그려지는지
-  - `useEffect` 의존성 배열 `[]` vs `[page]` 차이
-  - 폴링 구현 — `setInterval` + `useRef` + cleanup 패턴
-- [ ] **React Router**
-  - `useParams` — URL의 `:id` 를 어떻게 꺼내는지
-  - `useNavigate` — 삭제 후 대시보드로 이동하는 코드
-- [ ] **axios 패턴**
-  - `.then(r => r.data)` 체이닝이 뭔지
-  - `headers` 로 PIN 넘기는 방식
-  - `FormData` — 파일 업로드할 때 왜 쓰는지
-- [ ] **CORS**
-  - 왜 백엔드에 `allow_origins` 설정이 필요한지
-  - 프론트(3000) → 백엔드(8000) 요청이 막히는 이유
+### 배포
+- [ ] Alembic 마이그레이션 설정
+- [ ] Railway / Render 배포
+- [ ] 환경변수 프로덕션 설정 (.env → 배포 플랫폼 환경변수)
+- [ ] CORS 허용 출처 프로덕션 URL로 변경
 
-**코드 리뷰**
-- [ ] `services/api.js` — 전체 API 함수 구조
-- [ ] `Dashboard.jsx` — 폴링, 필터, 페이지네이션 흐름
-- [ ] `DocumentDetail.jsx` — 상태 관리, 재시도, 삭제 흐름
-- [ ] `App.jsx` — 라우팅 구조, 레이아웃
+### 기능 확장
+- [ ] OCR 지원 (스캔 PDF / 폰트 인코딩 깨진 PDF 처리)
+- [ ] 부서 삭제 기능
+- [ ] 파일 크기 검증 백엔드 적용 (현재 프론트엔드 전용)
+- [ ] Slack Bot Token 연동 (Webhook 방식에서 전환 시)
+- [ ] 로그인/인증 고도화 (현재 단일 PIN → 사용자별 권한)
