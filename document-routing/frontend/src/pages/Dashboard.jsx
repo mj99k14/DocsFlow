@@ -284,7 +284,7 @@ export default function Dashboard() {
                       </TableCell>
                       {!isMobile && (
                         <TableCell style={{ fontSize: 13, color: '#6B7280' }}>
-                          {new Date(doc.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                          {new Date(doc.created_at + 'Z').toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                         </TableCell>
                       )}
                       {!isMobile && (

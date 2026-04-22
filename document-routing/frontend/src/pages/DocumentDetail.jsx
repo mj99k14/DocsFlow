@@ -139,7 +139,7 @@ export default function DocumentDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                 <Calendar size={11} color="#9CA3AF" />
                 <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                  {new Date(doc.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                  {new Date(doc.created_at + 'Z').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}
                 </span>
               </div>
             </div>
@@ -320,7 +320,7 @@ export default function DocumentDetail() {
                           </div>
                         </div>
                         <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                          {new Date(item.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })}
+                          {new Date(item.created_at + 'Z').toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })}
                         </span>
                       </div>
                     )
