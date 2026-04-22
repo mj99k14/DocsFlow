@@ -45,7 +45,8 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict, c
     AI 분석 결과를 Slack으로 전송
     승인 / 반려 / 보류 버튼 포함
     """
-    department = ai_result.get("department", "경영기획팀")
+    departments_list = ai_result.get("departments", ["경영기획팀"])
+    department = ", ".join(departments_list) if departments_list else "경영기획팀"
     doc_type   = ai_result.get("document_type", "기타")
     summary    = ai_result.get("summary", "요약 없음")
     confidence = ai_result.get("confidence", 0.0)

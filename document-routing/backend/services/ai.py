@@ -14,6 +14,9 @@ def _build_system_prompt(department_names: list[str]) -> str:
 
 분류 가능한 부서 목록:
 {dept_list}
+
+※ 문서 내용이 여러 부서에 해당하는 경우 departments에 복수의 부서를 포함하세요.
+  단, 명확히 해당하는 부서만 포함하고 억지로 늘리지 마세요.
 """
 
 
@@ -29,16 +32,21 @@ def _build_tools(department_names: list[str]) -> list:
                         "type": "string",
                         "enum": ["계약서", "보고서", "기획서", "품의서", "기타"],
                     },
-                    "department": {
-                        "type": "string",
-                        "enum": department_names,
+                    "departments": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": department_names,
+                        },
+                        "description": "담당 부서 목록 (복수 가능, 최소 1개)",
+                        "minItems": 1,
                     },
                     "summary": {"type": "string"},
                     "keywords": {"type": "array", "items": {"type": "string"}},
                     "confidence": {"type": "number"},
                     "reasoning": {"type": "string"},     
                 },
-                "required": ["document_type", "department", "summary", "keywords", "confidence", "reasoning"],
+                "required": ["document_type", "departments", "summary", "keywords", "confidence", "reasoning"],
             },
         }
     ]

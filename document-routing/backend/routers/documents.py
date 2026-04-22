@@ -46,24 +46,23 @@ def process_document(document_id: int, file_path: str):
         db.commit()
         db.refresh(analysis)
 
-        # 5. 추천 부서 DB 저장
-        department_name = ai_result.get("department")
+        # 5. 추천 부서 DB 저장 (복수 가능)
+        department_names_result = ai_result.get("departments", [])
         confidence = ai_result.get("confidence", 0.0)
 
-        department = db.query(Department).filter(
-            Department.name == department_name
-        ).first()
-
-        if department:
-            doc_dept = DocumentDepartment(
-                analysis_id=analysis.id,
-                department_id=department.id,
-                confidence=confidence,
-                is_selected=True
-            )
-            db.add(doc_dept)
-            db.commit()
-
+        matched_departments = []
+        for dept_name in department_names_result:
+            dept = db.query(Department).filter(Department.name == dept_name).first()
+            if dept:
+                doc_dept = DocumentDepartment(
+                    analysis_id=analysis.id,
+                    department_id=dept.id,
+                    confidence=confidence,
+                    is_selected=True
+                )
+                db.add(doc_dept)
+                matched_departments.append(dept)
+        db.commit()
 
         # 6. 상태 → COMPLETED
         document.status = StatusType.COMPLETED
@@ -72,20 +71,20 @@ def process_document(document_id: int, file_path: str):
         # 7. 신뢰도 임계값 체크 → 미달 시 관리자 채널로 전송
         settings = db.query(SystemSettings).first()
         threshold = settings.confidence_threshold if settings else 0.0
+        dept_names_str = ", ".join(department_names_result) if department_names_result else "미확인"
 
         try:
             if threshold > 0.0 and confidence < threshold:
                 from services.slack import send_rejected_notification
                 print(f" 신뢰도 {int(confidence*100)}% < 임계값 {int(threshold*100)}% → 관리자 채널로 전송")
-                send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", department_name, departments=department_names)
+                send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", dept_names_str, departments=department_names)
             else:
-                channel = department.slack_channel if department else None
-                webhook_url = department.webhook_url if department else None
-                send_slack_notification(document_id, document.file_name, ai_result, channel=channel, webhook_url=webhook_url)
+                for dept in matched_departments:
+                    send_slack_notification(document_id, document.file_name, ai_result, channel=dept.slack_channel, webhook_url=dept.webhook_url)
         except Exception as slack_error:
             print(f" Slack 알림 실패 (분석은 완료됨): {str(slack_error)}")
 
-        print(f" 문서 {document_id} 분석 완료: {department_name} ({confidence})")
+        print(f" 문서 {document_id} 분석 완료: {dept_names_str} ({confidence})")
 
     except Exception as e:
         document = db.query(Document).filter(Document.id == document_id).first()
