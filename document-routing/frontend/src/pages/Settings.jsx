@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck, Sparkles, BarChart2, Trash2 } from 'lucide-react'
-import { getDepartments, updateDepartment, createDepartment, deleteDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals, getSlackChannels } from '../services/api.js'
+import { getDepartments, updateDepartment, createDepartment, deleteDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals } from '../services/api.js'
 import { toast } from 'sonner'
 
 const SECTION_ICONS = {
@@ -78,14 +78,12 @@ export default function Settings() {
   const [editingIndex, setEditingIndex] = useState(null)
   const [addingDept, setAddingDept] = useState(false)
   const [newDept, setNewDept] = useState({ name: '', slack_channel: '' })
-  const [slackChannels, setSlackChannels] = useState([])
   const [threshold, setThreshold] = useState(0)
   const [thresholdSaving, setThresholdSaving] = useState(false)
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error)
-    getSlackChannels().then(setSlackChannels).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -267,20 +265,18 @@ export default function Settings() {
 
               <div>
                 {editingIndex === index ? (
-                  <select
-                    value={dept.slack_channel || ''}
-                    onChange={e => handleFieldChange(index, 'slack_channel', e.target.value)}
-                    style={{
-                      height: 36, padding: '0 10px', border: '1px solid #EBEBEB',
-                      borderRadius: 8, fontSize: 13, color: '#111827',
-                      background: '#FAFAFA', width: '100%', outline: 'none',
-                    }}
-                  >
-                    <option value="">채널 선택</option>
-                    {slackChannels.map(c => (
-                      <option key={c.id} value={c.id}>#{c.name}</option>
-                    ))}
-                  </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <StyledInput
+                      value={dept.slack_channel || ''}
+                      onChange={e => handleFieldChange(index, 'slack_channel', e.target.value)}
+                      placeholder="채널명 (예: sales_영업팀)"
+                    />
+                    <StyledInput
+                      value={dept.webhook_url || ''}
+                      onChange={e => handleFieldChange(index, 'webhook_url', e.target.value)}
+                      placeholder="Webhook URL"
+                    />
+                  </div>
                 ) : (
                   <span style={{
                     fontSize: 12, fontFamily: 'monospace',
@@ -288,7 +284,7 @@ export default function Settings() {
                     color: dept.slack_channel ? '#5E6AD2' : '#9CA3AF',
                     padding: '3px 8px', borderRadius: 5,
                   }}>
-                    {dept.slack_channel ? `#${slackChannels.find(c => c.id === dept.slack_channel)?.name || dept.slack_channel}` : '미설정'}
+                    {dept.slack_channel ? `#${dept.slack_channel}` : '미설정'}
                   </span>
                 )}
               </div>
@@ -343,21 +339,17 @@ export default function Settings() {
                 autoFocus
                 onKeyDown={e => { if (e.key === 'Escape') setAddingDept(false) }}
               />
-              <div style={{ paddingLeft: 8 }}>
-                <select
+              <div style={{ paddingLeft: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <StyledInput
                   value={newDept.slack_channel}
                   onChange={e => setNewDept(prev => ({ ...prev, slack_channel: e.target.value }))}
-                  style={{
-                    height: 36, padding: '0 10px', border: '1px solid #EBEBEB',
-                    borderRadius: 8, fontSize: 13, color: '#111827',
-                    background: '#FAFAFA', width: '100%', outline: 'none',
-                  }}
-                >
-                  <option value="">채널 선택</option>
-                  {slackChannels.map(c => (
-                    <option key={c.id} value={c.id}>#{c.name}</option>
-                  ))}
-                </select>
+                  placeholder="채널명 (예: sales_영업팀)"
+                />
+                <StyledInput
+                  value={newDept.webhook_url || ''}
+                  onChange={e => setNewDept(prev => ({ ...prev, webhook_url: e.target.value }))}
+                  placeholder="Webhook URL"
+                />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                 <button
