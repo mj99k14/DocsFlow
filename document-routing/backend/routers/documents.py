@@ -105,11 +105,14 @@ async def upload_document(
     db: Session = Depends(get_db)
 ):
     if not any(file.filename.endswith(ext) for ext in ALLOWED_EXTENSIONS):
-        raise HTTPException(status_code=400, detail=f"PDF, DOCX 파일만 업로드 가능합니다")
+        raise HTTPException(status_code=400, detail="PDF, DOCX 파일만 업로드 가능합니다")
+
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="파일 크기는 10MB를 초과할 수 없습니다")
 
     file_path = f"{UPLOAD_DIR}/{file.filename}"
     with open(file_path, "wb") as f:
-        content = await file.read()
         f.write(content)
 
     document = Document(
