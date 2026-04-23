@@ -80,7 +80,7 @@ def process_document(document_id: int, file_path: str):
                 send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", dept_names_str, analysis=analysis, departments=department_names)
             else:
                 for dept in matched_departments:
-                    send_slack_notification(document_id, document.file_name, ai_result, channel=dept.slack_channel, webhook_url=dept.webhook_url)
+                    send_slack_notification(document_id, document.file_name, ai_result, channel=dept.slack_channel, webhook_url=dept.webhook_url, dept_id=dept.id)
         except Exception as slack_error:
             print(f" Slack 알림 실패 (분석은 완료됨): {str(slack_error)}")
 
@@ -245,47 +245,91 @@ def delete_document(
 
 # ── 9. 문서 승인/반려/보류 ───────────────────────────────────
 
+def _check_and_update_document_status(analysis_id: int, document, db):
+    """모든 부서의 결정을 확인하고 문서 최종 상태를 업데이트한다."""
+    all_depts = db.query(DocumentDepartment).filter(
+        DocumentDepartment.analysis_id == analysis_id
+    ).all()
+
+    any_rejected = any(d.approval_status == "REJECTED" for d in all_depts)
+    all_approved = all(d.approval_status == "APPROVED" for d in all_depts)
+
+    if any_rejected:
+        document.status = StatusType.REJECTED
+    elif all_approved:
+        document.status = StatusType.APPROVED
+    db.commit()
+    return document.status
+
+
 @router.post("/{document_id}/approve", response_model=ApprovalResponse)
 def approve_document(
     document_id: int,
     data: ApprovalRequest,
     db: Session = Depends(get_db)
 ):
+    from datetime import datetime, timezone
+
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
-    status_map = {
-        "APPROVED": StatusType.APPROVED,
-        "REJECTED": StatusType.REJECTED,
-        "HELD":     StatusType.HELD,
-    }
-    document.status = status_map[data.action]
-    db.commit()
+
+    analysis = db.query(AnalysisResult).filter(AnalysisResult.document_id == document_id).first()
+
+    if data.action == "HELD":
+        document.status = StatusType.HELD
+        db.commit()
+    elif data.department_id and analysis:
+        # 해당 부서의 결정 기록
+        doc_dept = db.query(DocumentDepartment).filter(
+            DocumentDepartment.analysis_id == analysis.id,
+            DocumentDepartment.department_id == data.department_id,
+        ).first()
+        if doc_dept:
+            doc_dept.approval_status = data.action.value
+            doc_dept.approved_by = data.approved_by
+            doc_dept.approved_at = datetime.now(timezone.utc)
+            db.commit()
+
+        # 모든 부서 결정 확인 → 최종 상태 결정
+        _check_and_update_document_status(analysis.id, document, db)
+    else:
+        # department_id 없는 단순 처리 (하위 호환)
+        status_map = {"APPROVED": StatusType.APPROVED, "REJECTED": StatusType.REJECTED}
+        if data.action.value in status_map:
+            document.status = status_map[data.action.value]
+            db.commit()
+
+    # 이력 저장
     approval = ApprovalHistory(
         document_id=document_id,
         action=data.action,
         approved_by=data.approved_by,
+        department_id=data.department_id,
     )
     db.add(approval)
     db.commit()
     db.refresh(approval)
 
     # Slack 알림
-    analysis = db.query(AnalysisResult).filter(AnalysisResult.document_id == document_id).first()
     dept_name = ""
     dept = None
-    if analysis:
+    if analysis and data.department_id:
+        dept = db.query(Department).filter(Department.id == data.department_id).first()
+        dept_name = dept.name if dept else ""
+    elif analysis:
         doc_dept = db.query(DocumentDepartment).filter(DocumentDepartment.analysis_id == analysis.id).first()
         if doc_dept:
             dept = db.query(Department).filter(Department.id == doc_dept.department_id).first()
             dept_name = dept.name if dept else ""
 
     try:
-        if data.action == "APPROVED":
+        if data.action == "APPROVED" and document.status == StatusType.APPROVED:
+            # 모든 부서 승인 완료 시에만 최종 알림
             channel = dept.slack_channel if dept else None
             webhook_url = dept.webhook_url if dept else None
             send_approved_notification(document_id, document.file_name, dept_name, data.approved_by, channel=channel, webhook_url=webhook_url)
-        elif data.action == "REJECTED":
+        elif data.action == "REJECTED" and document.status == StatusType.REJECTED:
             send_human_rejected_notification(document_id, document.file_name, data.approved_by, dept_name)
         elif data.action == "HELD":
             send_held_notification(document_id, document.file_name, data.approved_by, analysis)

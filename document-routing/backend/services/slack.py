@@ -40,7 +40,7 @@ def get_slack_channels() -> list:
     return [{"id": c["id"], "name": c["name"]} for c in data.get("channels", [])]
 
 
-def send_slack_notification(document_id: int, file_name: str, ai_result: dict, channel: str = None, webhook_url: str = None):
+def send_slack_notification(document_id: int, file_name: str, ai_result: dict, channel: str = None, webhook_url: str = None, dept_id: int = None):
     """
     AI 분석 결과를 Slack으로 전송
     승인 / 반려 / 보류 버튼 포함
@@ -104,14 +104,14 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict, c
                         "type": "button",
                         "text": {"type": "plain_text", "text": "✅ 승인", "emoji": True},
                         "style": "primary",
-                        "value": f"{document_id}",
+                        "value": f"{document_id}|{dept_id}" if dept_id else f"{document_id}",
                         "action_id": "approve_document"
                     },
                     {
                         "type": "button",
                         "text": {"type": "plain_text", "text": "❌ 반려", "emoji": True},
                         "style": "danger",
-                        "value": f"{document_id}",
+                        "value": f"{document_id}|{dept_id}" if dept_id else f"{document_id}",
                         "action_id": "reject_document"
                     },
                     {

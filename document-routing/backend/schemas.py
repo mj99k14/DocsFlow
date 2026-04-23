@@ -62,11 +62,14 @@ class DepartmentResponse(BaseModel):
 
 # AI 추천 부서 응답
 class DocumentDepartmentResponse(BaseModel):
-    id           : int
-    analysis_id  : int
-    department_id: int
-    confidence   : Optional[float] = None   # AI 신뢰도
-    is_selected  : bool
+    id             : int
+    analysis_id    : int
+    department_id  : int
+    confidence     : Optional[float] = None
+    is_selected    : bool
+    approval_status: Optional[str] = None
+    approved_by    : Optional[str] = None
+    approved_at    : Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -74,19 +77,21 @@ class DocumentDepartmentResponse(BaseModel):
 
 # ── 5. ApprovalHistory (승인 이력) ───────────────────────────
 
-# 승인 요청 (Slack에서 버튼 클릭 시)
+# 승인 요청 (Slack 버튼 또는 웹 UI)
 class ApprovalRequest(BaseModel):
-    action     : ActionType   # APPROVED / REJECTED
-    approved_by: str          # Slack 유저명
+    action       : ActionType
+    approved_by  : str
+    department_id: Optional[int] = None   # 부서별 승인 시 필요
 
 
 # 승인 응답
 class ApprovalResponse(BaseModel):
-    id         : int
-    document_id: int
-    action     : ActionType
-    approved_by: str
-    created_at : datetime
+    id           : int
+    document_id  : int
+    action       : ActionType
+    approved_by  : str
+    department_id: Optional[int] = None
+    created_at   : datetime
 
     class Config:
         from_attributes = True

@@ -72,7 +72,10 @@ async def slack_callback(
     if not action_type:
         return JSONResponse(content={"error": "알 수 없는 액션"}, status_code=400)
 
-    document_id = int(value)
+    # value 형식: "{document_id}|{department_id}" 또는 "{document_id}"
+    parts = value.split("|")
+    document_id = int(parts[0])
+    department_id = int(parts[1]) if len(parts) > 1 else None
 
     background_tasks.add_task(
         process_approval,
@@ -80,14 +83,18 @@ async def slack_callback(
         action_type,
         user_name,
         response_url,
+        department_id,
     )
 
     # Slack 3초 규칙
     return JSONResponse(content={"ok": True})
 
 
-def process_approval(document_id: int, action_type: ActionType, user_name: str, response_url: str = ""):
-    """승인/반려/보류 처리"""
+def process_approval(document_id: int, action_type: ActionType, user_name: str, response_url: str = "", department_id: int = None):
+    """승인/반려/보류 처리 (AND 로직: 모든 부서 승인 시 최종 APPROVED)"""
+    from datetime import datetime, timezone
+    from models import DocumentDepartment, Department
+
     db = sessionLocal()
     try:
         document = db.query(Document).filter(Document.id == document_id).first()
@@ -95,78 +102,84 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
             print(f" 문서 {document_id} 없음")
             return
 
-        # 상태 업데이트
-        status_map = {
-            ActionType.APPROVED: StatusType.APPROVED,
-            ActionType.REJECTED: StatusType.REJECTED,
-            ActionType.HELD:     StatusType.HELD,
-        }
-        document.status = status_map[action_type]
-        db.commit()
+        analysis = db.query(AnalysisResult).filter(
+            AnalysisResult.document_id == document_id
+        ).first()
+
+        if action_type == ActionType.HELD:
+            document.status = StatusType.HELD
+            db.commit()
+        elif department_id and analysis:
+            # 해당 부서의 결정 기록
+            doc_dept = db.query(DocumentDepartment).filter(
+                DocumentDepartment.analysis_id == analysis.id,
+                DocumentDepartment.department_id == department_id,
+            ).first()
+            if doc_dept:
+                doc_dept.approval_status = action_type.value
+                doc_dept.approved_by = user_name
+                doc_dept.approved_at = datetime.now(timezone.utc)
+                db.commit()
+
+            # 모든 부서 결정 확인
+            all_depts = db.query(DocumentDepartment).filter(
+                DocumentDepartment.analysis_id == analysis.id
+            ).all()
+            any_rejected = any(d.approval_status == "REJECTED" for d in all_depts)
+            all_approved = all(d.approval_status == "APPROVED" for d in all_depts)
+
+            if any_rejected:
+                document.status = StatusType.REJECTED
+            elif all_approved:
+                document.status = StatusType.APPROVED
+            db.commit()
+        else:
+            status_map = {
+                ActionType.APPROVED: StatusType.APPROVED,
+                ActionType.REJECTED: StatusType.REJECTED,
+                ActionType.HELD:     StatusType.HELD,
+            }
+            document.status = status_map[action_type]
+            db.commit()
 
         # 승인 이력 저장
         approval = ApprovalHistory(
             document_id=document_id,
             action=action_type,
             approved_by=user_name,
+            department_id=department_id,
         )
         db.add(approval)
         db.commit()
 
         print(f" 문서 {document_id} → {action_type.value} ({user_name})")
 
-        # Slack 메시지 업데이트 (버튼 제거 + 결과 표시)
         if response_url:
             update_slack_message(response_url, action_type.value, user_name)
 
-        # 반려 시 관리자 채널로 재분류 요청 (이미 재분류된 적 있으면 생략)
-        if action_type == ActionType.REJECTED:
+        # 최종 반려 확정 시 관리자 채널 알림
+        if document.status == StatusType.REJECTED:
             already_rerouted = db.query(ApprovalHistory).filter(
                 ApprovalHistory.document_id == document_id,
                 ApprovalHistory.approved_by.like("%(재분류→%"),
             ).first()
-
             if not already_rerouted:
-                analysis = db.query(AnalysisResult).filter(
-                    AnalysisResult.document_id == document_id
-                ).first()
                 original_department = "미확인"
-
-                from models import DocumentDepartment, Department
-                doc_dept = db.query(DocumentDepartment).join(AnalysisResult).filter(
-                    AnalysisResult.document_id == document_id
-                ).first()
-
-                if doc_dept:
-                    dept = db.query(Department).filter(
-                        Department.id == doc_dept.department_id
-                    ).first()
+                if department_id:
+                    dept = db.query(Department).filter(Department.id == department_id).first()
                     original_department = dept.name if dept else "미확인"
-
-                from models import Department as Dept
-                dept_names = [d.name for d in db.query(Dept).all()]
+                dept_names = [d.name for d in db.query(Department).all()]
                 send_rejected_notification(
-                    document_id,
-                    document.file_name,
-                    user_name,
-                    original_department,
-                    analysis,
-                    departments=dept_names,
+                    document_id, document.file_name, user_name,
+                    original_department, analysis, departments=dept_names,
                 )
 
         # 보류 시 관리자 채널 알림
         if action_type == ActionType.HELD:
-            analysis = db.query(AnalysisResult).filter(
-                AnalysisResult.document_id == document_id
-            ).first()
-            from models import Department as Dept
-            dept_names = [d.name for d in db.query(Dept).all()]
+            dept_names = [d.name for d in db.query(Department).all()]
             send_held_notification(
-                document_id,
-                document.file_name,
-                user_name,
-                analysis,
-                departments=dept_names,
+                document_id, document.file_name, user_name,
+                analysis, departments=dept_names,
             )
 
     except Exception as e:

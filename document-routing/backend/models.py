@@ -76,11 +76,14 @@ class Department(Base):
 class DocumentDepartment(Base):
     __tablename__ = "document_departments"
 
-    id            = Column(Integer, primary_key=True, index=True)
-    analysis_id   = Column(Integer, ForeignKey("analysis_results.id"), nullable=False)  # 분석 Id
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)        # 부서 Id
-    confidence    = Column(Float)                        # AI 신뢰도 (0.0 ~ 1.0)
-    is_selected   = Column(Boolean, default=False)       # 최종 선택 여부
+    id              = Column(Integer, primary_key=True, index=True)
+    analysis_id     = Column(Integer, ForeignKey("analysis_results.id"), nullable=False)
+    department_id   = Column(Integer, ForeignKey("departments.id"), nullable=False)
+    confidence      = Column(Float)
+    is_selected     = Column(Boolean, default=False)
+    approval_status = Column(String(20), nullable=True)   # 'APPROVED' | 'REJECTED' | None(대기)
+    approved_by     = Column(String(100), nullable=True)
+    approved_at     = Column(DateTime, nullable=True)
 
     # 관계
     analysis   = relationship("AnalysisResult", back_populates="departments")
@@ -91,11 +94,12 @@ class DocumentDepartment(Base):
 class ApprovalHistory(Base):
     __tablename__ = "approval_history"
 
-    id          = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)  # 문서 Id
-    action      = Column(Enum(ActionType), nullable=False)   # 승인/반려
-    approved_by = Column(String(100))                        # 승인자 (Slack 유저)
-    created_at  = Column(DateTime, default=utcnow) # 승인 시간
+    id            = Column(Integer, primary_key=True, index=True)
+    document_id   = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    action        = Column(Enum(ActionType), nullable=False)
+    approved_by   = Column(String(100))
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)  # 어느 부서가 결정했는지
+    created_at    = Column(DateTime, default=utcnow)
 
     # 관계
     document = relationship("Document", back_populates="approvals")

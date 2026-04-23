@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw, Trash2 } from 'lucide-react'
-import { getDocument, getDocumentHistory, getDepartments, downloadFile, retryDocument, deleteDocument } from '../services/api.js'
+import { getDocument, getDocumentHistory, getDepartments, downloadFile, retryDocument, deleteDocument, approveDocumentDept, holdDocument } from '../services/api.js'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -36,6 +36,8 @@ export default function DocumentDetail() {
   const [deletePin, setDeletePin] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [approverName, setApproverName] = useState('')
+  const [approving, setApproving] = useState(false)
   const pollingRef = useRef(null)
 
   const load = () => {
@@ -84,6 +86,39 @@ export default function DocumentDetail() {
     }
   }
 
+  const handleApprove = async (deptId) => {
+    if (!approverName.trim()) { toast.error('담당자 이름을 입력해주세요'); return }
+    setApproving(true)
+    try {
+      await approveDocumentDept(id, deptId, 'APPROVED', approverName)
+      toast.success('승인 처리되었습니다')
+      load()
+    } catch { toast.error('승인에 실패했습니다') }
+    finally { setApproving(false) }
+  }
+
+  const handleReject = async (deptId) => {
+    if (!approverName.trim()) { toast.error('담당자 이름을 입력해주세요'); return }
+    setApproving(true)
+    try {
+      await approveDocumentDept(id, deptId, 'REJECTED', approverName)
+      toast.success('반려 처리되었습니다')
+      load()
+    } catch { toast.error('반려에 실패했습니다') }
+    finally { setApproving(false) }
+  }
+
+  const handleHold = async () => {
+    if (!approverName.trim()) { toast.error('담당자 이름을 입력해주세요'); return }
+    setApproving(true)
+    try {
+      await holdDocument(id, approverName)
+      toast.success('보류 처리되었습니다')
+      load()
+    } catch { toast.error('보류 처리에 실패했습니다') }
+    finally { setApproving(false) }
+  }
+
   if (loading) return (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
@@ -104,8 +139,6 @@ export default function DocumentDetail() {
 
   const isMobile = useIsMobile()
   const conf = doc.analysis?.departments?.[0]?.confidence || 0
-  const deptId = doc.analysis?.departments?.[0]?.department_id
-  const deptName = deptMap[deptId] || '미확인'
   const badge = STATUS_BADGE[doc.status] || STATUS_BADGE.PENDING
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -333,47 +366,98 @@ export default function DocumentDetail() {
           {/* 오른쪽 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* 부서 추천 */}
+            {/* 부서 추천 + 승인 */}
             {doc.analysis?.departments?.length > 0 && (
               <Card style={{ padding: 28 }}>
-                <p style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 20 }}>추천 부서</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 14,
-                    background: '#EEF0FF',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Building2 size={22} color="#5E6AD2" />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 17, fontWeight: 700, color: '#111827' }}>{deptName}</p>
-                    <p style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{doc.analysis.document_type}</p>
-                  </div>
-                </div>
+                <p style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 4 }}>추천 부서</p>
+                <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 20 }}>{doc.analysis.document_type}</p>
 
-                <div style={{ marginBottom: 8 }}>
+                {/* 신뢰도 바 */}
+                <div style={{ marginBottom: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <TrendingUp size={13} color="#9CA3AF" />
-                      <span style={{ fontSize: 12, color: '#9CA3AF' }}>신뢰도</span>
+                      <span style={{ fontSize: 12, color: '#9CA3AF' }}>AI 신뢰도</span>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{Math.round(conf * 100)}%</span>
                   </div>
                   <div style={{ height: 6, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
                     <div style={{
-                      width: `${Math.round(conf * 100)}%`,
-                      height: '100%',
+                      width: `${Math.round(conf * 100)}%`, height: '100%',
                       background: conf >= 0.8 ? '#059669' : conf >= 0.5 ? '#5E6AD2' : '#F59E0B',
-                      borderRadius: 99,
-                      transition: 'width 0.6s ease',
+                      borderRadius: 99, transition: 'width 0.6s ease',
                     }} />
                   </div>
                 </div>
 
-                {conf >= 0.9 && (
-                  <div style={{ marginTop: 16, padding: '10px 14px', background: '#ECFDF5', borderRadius: 8 }}>
-                    <p style={{ fontSize: 12, color: '#059669', fontWeight: 500 }}>✓ 높은 신뢰도로 정확한 분류입니다</p>
-                  </div>
+                {/* 부서별 승인 상태 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                  {doc.analysis.departments.map(d => {
+                    const name = deptMap[d.department_id] || '미확인'
+                    const st = d.approval_status
+                    return (
+                      <div key={d.id} style={{
+                        padding: '12px 14px', borderRadius: 10,
+                        background: st === 'APPROVED' ? '#ECFDF5' : st === 'REJECTED' ? '#FEF2F2' : '#F9FAFB',
+                        border: `1px solid ${st === 'APPROVED' ? '#6EE7B7' : st === 'REJECTED' ? '#FECACA' : '#F3F4F6'}`,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Building2 size={14} color="#5E6AD2" />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{name}</span>
+                          </div>
+                          {st === 'APPROVED' && <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>✅ 승인</span>}
+                          {st === 'REJECTED' && <span style={{ fontSize: 12, color: '#DC2626', fontWeight: 600 }}>❌ 반려</span>}
+                          {!st && <span style={{ fontSize: 11, color: '#9CA3AF' }}>대기중</span>}
+                        </div>
+                        {st && d.approved_by && (
+                          <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>by {d.approved_by}</p>
+                        )}
+                        {!st && ['COMPLETED', 'APPROVED', 'REJECTED'].includes(doc.status) && (
+                          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                            <button
+                              onClick={() => handleApprove(d.department_id)}
+                              disabled={approving}
+                              style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+                            >승인</button>
+                            <button
+                              onClick={() => handleReject(d.department_id)}
+                              disabled={approving}
+                              style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: '#DC2626', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+                            >반려</button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* 담당자 이름 입력 + 보류 */}
+                {['COMPLETED', 'APPROVED', 'REJECTED'].includes(doc.status) && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="담당자 이름 입력 (필수)"
+                      value={approverName}
+                      onChange={e => setApproverName(e.target.value)}
+                      style={{
+                        width: '100%', boxSizing: 'border-box', height: 36,
+                        padding: '0 12px', border: '1px solid #E5E7EB',
+                        borderRadius: 8, fontSize: 13, outline: 'none', marginBottom: 8,
+                      }}
+                    />
+                    {doc.status === 'COMPLETED' && (
+                      <button
+                        onClick={handleHold}
+                        disabled={approving}
+                        style={{
+                          width: '100%', padding: '8px 0', borderRadius: 8,
+                          border: '1px solid #DDD6FE', background: '#F5F3FF',
+                          color: '#7C3AED', fontSize: 13, cursor: 'pointer', fontWeight: 500,
+                        }}
+                      >⏸ 전체 보류</button>
+                    )}
+                  </>
                 )}
               </Card>
             )}

@@ -51,6 +51,19 @@ export const downloadFile = (id, fileName) =>
   })
 export const getSlackChannels = () => axios.get(`${API_URL}/slack/channels`).then(r => r.data)
 
+export const approveDocumentDept = (id, departmentId, action, approvedBy) =>
+  axios.post(`${API_URL}/documents/${id}/approve`, {
+    action,
+    approved_by: approvedBy,
+    department_id: departmentId,
+  }).then(r => r.data)
+
+export const holdDocument = (id, approvedBy) =>
+  axios.post(`${API_URL}/documents/${id}/approve`, {
+    action: 'HELD',
+    approved_by: approvedBy,
+  }).then(r => r.data)
+
 export const retryDocument = (id) =>
   axios.post(`${API_URL}/documents/${id}/retry`).then(r => r.data)
 
