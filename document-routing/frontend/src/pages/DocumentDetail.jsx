@@ -40,6 +40,8 @@ export default function DocumentDetail() {
   const [approving, setApproving] = useState(false)
   const pollingRef = useRef(null)
 
+  const isMobile = useIsMobile()
+
   const load = () => {
     Promise.all([getDocument(id), getDocumentHistory(id), getDepartments()])
       .then(([d, h, depts]) => {
@@ -137,7 +139,6 @@ export default function DocumentDetail() {
     </div>
   )
 
-  const isMobile = useIsMobile()
   const conf = doc.analysis?.departments?.[0]?.confidence || 0
   const badge = STATUS_BADGE[doc.status] || STATUS_BADGE.PENDING
   return (
