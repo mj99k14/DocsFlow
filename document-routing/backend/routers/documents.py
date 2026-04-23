@@ -30,8 +30,8 @@ def process_document(document_id: int, file_path: str):
         # 2. 텍스트 추출 (PDF/DOCX)
         text = extract_text(file_path)
 
-        # 3. Claude AI 분석 (DB 부서 목록 동적 전달)
-        department_names = [d.name for d in db.query(Department).all()]
+        # 3. Claude AI 분석 ("반려"는 AI 분류 대상 제외 - 사람이 결정)
+        department_names = [d.name for d in db.query(Department).all() if d.name != "반려"]
         ai_result = analyze_document(text, department_names)
 
         # 4. 분석 결과 DB 저장
@@ -77,7 +77,7 @@ def process_document(document_id: int, file_path: str):
             if threshold > 0.0 and confidence < threshold:
                 from services.slack import send_rejected_notification
                 print(f" 신뢰도 {int(confidence*100)}% < 임계값 {int(threshold*100)}% → 관리자 채널로 전송")
-                send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", dept_names_str, departments=department_names)
+                send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", dept_names_str, analysis=analysis, departments=department_names)
             else:
                 for dept in matched_departments:
                     send_slack_notification(document_id, document.file_name, ai_result, channel=dept.slack_channel, webhook_url=dept.webhook_url)
