@@ -327,45 +327,87 @@ export default function DocumentDetail() {
 
             {/* 승인 이력 */}
             <Card style={{ padding: 28 }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 20 }}>승인 이력</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={15} color="#6B7280" />
+                  </div>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>승인 이력</p>
+                </div>
+                {history.length > 0 && (
+                  <span style={{ fontSize: 12, color: '#9CA3AF', background: '#F3F4F6', padding: '3px 10px', borderRadius: 99 }}>
+                    총 {history.length}건
+                  </span>
+                )}
+              </div>
               {history.length === 0 ? (
-                <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                <div style={{ padding: '32px 0', textAlign: 'center' }}>
                   <Clock size={28} color="#E5E7EB" style={{ margin: '0 auto 8px' }} />
                   <p style={{ fontSize: 13, color: '#D1D5DB' }}>아직 승인 이력이 없습니다</p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {history.map(item => {
-                    const cfg = ACTION_CONFIG[item.action] || ACTION_CONFIG.HELD
-                    const Icon = cfg.icon
-                    const deptName = item.department_id ? deptMap[item.department_id] : null
-                    return (
-                      <div key={item.id} style={{
-                        padding: '12px 16px', borderRadius: 10,
-                        background: '#FAFAFA', border: '1px solid #F3F4F6',
-                        borderLeft: `3px solid ${cfg.color}`,
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: deptName ? 4 : 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 26, height: 26, borderRadius: 7, background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Icon size={13} color={cfg.color} />
-                            </div>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color }}>{cfg.text}</span>
-                            {deptName && (
-                              <span style={{
-                                fontSize: 11, fontWeight: 600, padding: '2px 8px',
-                                borderRadius: 99, background: '#EEF0FF', color: '#5E6AD2',
-                              }}>{deptName}</span>
-                            )}
+                <div style={{ position: 'relative', paddingLeft: 16 }}>
+                  {/* 타임라인 세로선 */}
+                  <div style={{
+                    position: 'absolute', left: 15, top: 14, bottom: 14,
+                    width: 1, background: 'linear-gradient(to bottom, #E5E7EB, #F3F4F6)',
+                  }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {history.map((item, idx) => {
+                      const cfg = ACTION_CONFIG[item.action] || ACTION_CONFIG.HELD
+                      const Icon = cfg.icon
+                      const deptName = item.department_id ? deptMap[item.department_id] : null
+                      const rerouteMatch = item.approved_by?.match(/^(.+?)\(재분류→(.+?)\)$/)
+                      const displayName = rerouteMatch ? rerouteMatch[1] : item.approved_by
+                      const rerouteDept = rerouteMatch ? rerouteMatch[2] : null
+                      const timeStr = new Date(item.created_at + 'Z').toLocaleString('ko-KR', {
+                        timeZone: 'Asia/Seoul', hour12: false,
+                        month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                      })
+                      return (
+                        <div key={item.id} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', paddingBottom: idx < history.length - 1 ? 12 : 0 }}>
+                          {/* 타임라인 노드 */}
+                          <div style={{
+                            width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                            background: cfg.bg, border: `2px solid ${cfg.color}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            position: 'relative', zIndex: 1,
+                          }}>
+                            <Icon size={13} color={cfg.color} />
                           </div>
-                          <span style={{ fontSize: 11, color: '#9CA3AF' }}>
-                            {new Date(item.created_at + 'Z').toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })}
-                          </span>
+                          {/* 카드 */}
+                          <div style={{
+                            flex: 1, background: '#FAFAFA', borderRadius: 12,
+                            padding: '10px 14px', border: '1px solid #F0F0F0',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: cfg.color }}>{cfg.text}</span>
+                                {deptName && (
+                                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#EEF0FF', color: '#5E6AD2', letterSpacing: '0.01em' }}>
+                                    {deptName}
+                                  </span>
+                                )}
+                                {rerouteDept && (
+                                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#FEF3C7', color: '#B45309', letterSpacing: '0.01em' }}>
+                                    재분류 → {rerouteDept}
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: 11, color: '#C4C9D4', fontVariantNumeric: 'tabular-nums' }}>{timeStr}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ fontSize: 9, color: '#6B7280', fontWeight: 700 }}>by</span>
+                              </div>
+                              <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>{displayName}</span>
+                            </div>
+                          </div>
                         </div>
-                        <p style={{ fontSize: 12, color: '#9CA3AF', marginLeft: 34 }}>by {item.approved_by}</p>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </Card>
