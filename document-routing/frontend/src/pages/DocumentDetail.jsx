@@ -38,6 +38,7 @@ export default function DocumentDetail() {
   const [deleting, setDeleting] = useState(false)
   const [approverName, setApproverName] = useState('')
   const [approving, setApproving] = useState(false)
+  const [confirmRejectDeptId, setConfirmRejectDeptId] = useState(null)
   const pollingRef = useRef(null)
 
   const isMobile = useIsMobile()
@@ -463,19 +464,36 @@ export default function DocumentDetail() {
                         {st && d.approved_by && (
                           <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>by {d.approved_by}</p>
                         )}
-                        {!st && ['COMPLETED', 'APPROVED', 'REJECTED'].includes(doc.status) && (
-                          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                            <button
-                              onClick={() => handleApprove(d.department_id)}
-                              disabled={approving}
-                              style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
-                            >승인</button>
-                            <button
-                              onClick={() => handleReject(d.department_id)}
-                              disabled={approving}
-                              style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: '#DC2626', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
-                            >반려</button>
-                          </div>
+                        {!st && doc.status === 'COMPLETED' && (
+                          confirmRejectDeptId === d.department_id ? (
+                            <div style={{ marginTop: 10, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 12px' }}>
+                              <p style={{ fontSize: 12, color: '#DC2626', fontWeight: 600, marginBottom: 8 }}>정말 반려하시겠습니까?</p>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button
+                                  onClick={() => setConfirmRejectDeptId(null)}
+                                  style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+                                >취소</button>
+                                <button
+                                  onClick={() => { handleReject(d.department_id); setConfirmRejectDeptId(null) }}
+                                  disabled={approving}
+                                  style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: '#DC2626', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                                >반려 확인</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                              <button
+                                onClick={() => handleApprove(d.department_id)}
+                                disabled={approving}
+                                style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+                              >승인</button>
+                              <button
+                                onClick={() => setConfirmRejectDeptId(d.department_id)}
+                                disabled={approving}
+                                style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+                              >반려</button>
+                            </div>
+                          )
                         )}
                       </div>
                     )
@@ -483,7 +501,7 @@ export default function DocumentDetail() {
                 </div>
 
                 {/* 담당자 이름 입력 + 보류 */}
-                {['COMPLETED', 'APPROVED', 'REJECTED'].includes(doc.status) && (
+                {doc.status === 'COMPLETED' && doc.analysis?.departments?.some(d => !d.approval_status) && (
                   <>
                     <input
                       type="text"
