@@ -338,24 +338,31 @@ export default function DocumentDetail() {
                   {history.map(item => {
                     const cfg = ACTION_CONFIG[item.action] || ACTION_CONFIG.HELD
                     const Icon = cfg.icon
+                    const deptName = item.department_id ? deptMap[item.department_id] : null
                     return (
                       <div key={item.id} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '12px 16px', borderRadius: 10,
                         background: '#FAFAFA', border: '1px solid #F3F4F6',
+                        borderLeft: `3px solid ${cfg.color}`,
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Icon size={14} color={cfg.color} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: deptName ? 4 : 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon size={13} color={cfg.color} />
+                            </div>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color }}>{cfg.text}</span>
+                            {deptName && (
+                              <span style={{
+                                fontSize: 11, fontWeight: 600, padding: '2px 8px',
+                                borderRadius: 99, background: '#EEF0FF', color: '#5E6AD2',
+                              }}>{deptName}</span>
+                            )}
                           </div>
-                          <div>
-                            <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{cfg.text}</span>
-                            <span style={{ fontSize: 12, color: '#9CA3AF', marginLeft: 8 }}>by {item.approved_by}</span>
-                          </div>
+                          <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+                            {new Date(item.created_at + 'Z').toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })}
+                          </span>
                         </div>
-                        <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                          {new Date(item.created_at + 'Z').toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })}
-                        </span>
+                        <p style={{ fontSize: 12, color: '#9CA3AF', marginLeft: 34 }}>by {item.approved_by}</p>
                       </div>
                     )
                   })}
