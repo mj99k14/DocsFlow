@@ -286,6 +286,8 @@ def approve_document(
             DocumentDepartment.department_id == data.department_id,
         ).first()
         if doc_dept:
+            if doc_dept.approval_status is not None:
+                raise HTTPException(status_code=400, detail="이미 처리된 부서입니다")
             doc_dept.approval_status = data.action.value
             doc_dept.approved_by = data.approved_by
             doc_dept.approved_at = datetime.now(timezone.utc)

@@ -116,6 +116,9 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
                 DocumentDepartment.department_id == department_id,
             ).first()
             if doc_dept:
+                if doc_dept.approval_status is not None:
+                    print(f" 부서 {department_id} 이미 결정됨({doc_dept.approval_status}), 스킵")
+                    return
                 doc_dept.approval_status = action_type.value
                 doc_dept.approved_by = user_name
                 doc_dept.approved_at = datetime.now(timezone.utc)
@@ -213,6 +216,16 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
             "reasoning":     analysis.reasoning,
             "confidence":    0.0
         }
+
+        # 재분류 시 기존 부서 결정 초기화 (이전 승인/반려가 새 결정에 영향 안 주도록)
+        from models import DocumentDepartment
+        all_doc_depts = db.query(DocumentDepartment).filter(
+            DocumentDepartment.analysis_id == analysis.id
+        ).all()
+        for dd in all_doc_depts:
+            dd.approval_status = None
+            dd.approved_by = None
+            dd.approved_at = None
 
         # 상태 COMPLETED 유지 (AI 분석은 이미 완료됨, 부서만 변경)
         document.status = StatusType.COMPLETED
