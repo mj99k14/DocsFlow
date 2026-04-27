@@ -467,7 +467,7 @@ export default function DocumentDetail() {
                         {st && d.approved_by && (
                           <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>by {d.approved_by}</p>
                         )}
-                        {!st && doc.status === 'COMPLETED' && (
+                        {!st && (doc.status === 'COMPLETED' || doc.status === 'HELD') && (
                           confirmRejectDeptId === d.department_id ? (
                             <div style={{ marginTop: 10, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 12px' }}>
                               <p style={{ fontSize: 12, color: '#DC2626', fontWeight: 600, marginBottom: 8 }}>정말 반려하시겠습니까?</p>
@@ -503,8 +503,16 @@ export default function DocumentDetail() {
                   })}
                 </div>
 
+                {/* 보류 안내 배너 */}
+                {doc.status === 'HELD' && (
+                  <div style={{ padding: '10px 14px', background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, marginBottom: 8 }}>
+                    <p style={{ fontSize: 12, color: '#7C3AED', fontWeight: 600, margin: 0 }}>⏸ 보류 중인 문서입니다</p>
+                    <p style={{ fontSize: 11, color: '#9CA3AF', margin: '4px 0 0' }}>아래에서 각 부서별로 다시 승인 또는 반려할 수 있습니다.</p>
+                  </div>
+                )}
+
                 {/* 담당자 이름 입력 + 보류 */}
-                {doc.status === 'COMPLETED' && doc.analysis?.departments?.some(d => !d.approval_status) && (
+                {(doc.status === 'COMPLETED' || doc.status === 'HELD') && doc.analysis?.departments?.some(d => !d.approval_status) && (
                   <>
                     <input
                       type="text"

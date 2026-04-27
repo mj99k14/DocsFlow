@@ -119,6 +119,9 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
                 if doc_dept.approval_status is not None:
                     print(f" 부서 {department_id} 이미 결정됨({doc_dept.approval_status}), 스킵")
                     return
+                # 보류 상태에서 재처리 시 COMPLETED로 복원 후 진행
+                if document.status == StatusType.HELD:
+                    document.status = StatusType.COMPLETED
                 doc_dept.approval_status = action_type.value
                 doc_dept.approved_by = user_name
                 doc_dept.approved_at = datetime.now(timezone.utc)

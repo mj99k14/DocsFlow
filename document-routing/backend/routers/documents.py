@@ -290,6 +290,9 @@ def approve_document(
         if doc_dept:
             if doc_dept.approval_status is not None:
                 raise HTTPException(status_code=400, detail="이미 처리된 부서입니다")
+            # 보류 상태에서 재처리 시 COMPLETED로 복원 후 진행
+            if document.status == StatusType.HELD:
+                document.status = StatusType.COMPLETED
             doc_dept.approval_status = data.action.value
             doc_dept.approved_by = data.approved_by
             doc_dept.approved_at = datetime.now(timezone.utc)
