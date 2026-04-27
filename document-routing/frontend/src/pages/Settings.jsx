@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck, Sparkles, BarChart2, Trash2 } from 'lucide-react'
-import { getDepartments, updateDepartment, createDepartment, deleteDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals } from '../services/api.js'
+import { MessageSquare, Building2, Edit2, Check, X, Plus, ShieldCheck, Sparkles, BarChart2, Trash2, Users } from 'lucide-react'
+import { getDepartments, updateDepartment, createDepartment, deleteDepartment, verifyAdminPin, getAdminSettings, updateAdminSettings, getAdminStats, exportApprovals, getMembers, createMember, deleteMember } from '../services/api.js'
 import { toast } from 'sonner'
 
 const SECTION_ICONS = {
-  slack: { bg: '#EEF0FF', color: '#5E6AD2', Icon: MessageSquare },
-  dept:  { bg: '#EFF6FF', color: '#3B82F6', Icon: Building2 },
-  ai:    { bg: '#FDF4FF', color: '#9333EA', Icon: Sparkles },
-  stats: { bg: '#FFF7ED', color: '#EA580C', Icon: BarChart2 },
+  slack:   { bg: '#EEF0FF', color: '#5E6AD2', Icon: MessageSquare },
+  dept:    { bg: '#EFF6FF', color: '#3B82F6', Icon: Building2 },
+  members: { bg: '#F0FDF4', color: '#059669', Icon: Users },
+  ai:      { bg: '#FDF4FF', color: '#9333EA', Icon: Sparkles },
+  stats:   { bg: '#FFF7ED', color: '#EA580C', Icon: BarChart2 },
 }
 
 function SectionHeader({ type, title, desc }) {
@@ -81,9 +82,14 @@ export default function Settings() {
   const [threshold, setThreshold] = useState(0)
   const [thresholdSaving, setThresholdSaving] = useState(false)
   const [stats, setStats] = useState(null)
+  const [members, setMembers] = useState([])
+  const [newMemberName, setNewMemberName] = useState('')
+  const [newMemberDeptId, setNewMemberDeptId] = useState('')
+  const [addingMember, setAddingMember] = useState(false)
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error)
+    getMembers().then(setMembers).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -209,6 +215,31 @@ export default function Settings() {
       toast.success('부서가 추가되었습니다!')
     } catch (e) {
       toast.error('추가 실패: ' + e.message)
+    }
+  }
+
+  const handleAddMember = async () => {
+    if (!newMemberName.trim()) return
+    try {
+      const created = await createMember({ name: newMemberName.trim(), department_id: newMemberDeptId ? Number(newMemberDeptId) : null }, verifiedPin)
+      setMembers(prev => [...prev, created])
+      setNewMemberName('')
+      setNewMemberDeptId('')
+      setAddingMember(false)
+      toast.success('멤버가 추가되었습니다!')
+    } catch (e) {
+      toast.error('추가 실패: ' + e.message)
+    }
+  }
+
+  const handleDeleteMember = async (member) => {
+    if (!window.confirm(`"${member.name}"을(를) 삭제하시겠습니까?`)) return
+    try {
+      await deleteMember(member.id, verifiedPin)
+      setMembers(prev => prev.filter(m => m.id !== member.id))
+      toast.success('멤버가 삭제되었습니다.')
+    } catch (e) {
+      toast.error('삭제 실패: ' + e.message)
     }
   }
 
@@ -385,6 +416,106 @@ export default function Settings() {
           >
             <Plus size={14} />
             새 부서 추가
+          </button>
+        )}
+      </Card>
+
+      {/* 멤버 관리 */}
+      <Card>
+        <SectionHeader type="members" title="멤버 관리" desc="승인 담당자 목록을 관리하세요" />
+
+        <div style={{ border: '1px solid #F3F4F6', borderRadius: 8, overflow: 'hidden' }}>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr 40px',
+            background: '#FAFAFA', padding: '8px 16px',
+            borderBottom: '1px solid #F3F4F6',
+          }}>
+            {['이름', '소속 부서', ''].map((h, i) => (
+              <span key={i} style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
+            ))}
+          </div>
+
+          {members.length === 0 && !addingMember && (
+            <div style={{ padding: '20px 16px', textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
+              등록된 멤버가 없습니다
+            </div>
+          )}
+
+          {members.map((member, index) => {
+            const deptName = departments.find(d => d.id === member.department_id)?.name || '-'
+            return (
+              <div key={member.id} style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr 40px',
+                alignItems: 'center', padding: '10px 16px',
+                borderBottom: index < members.length - 1 ? '1px solid #F9FAFB' : 'none',
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{member.name}</span>
+                <span style={{
+                  fontSize: 12, background: '#F0FDF4', color: '#059669',
+                  padding: '3px 8px', borderRadius: 5, display: 'inline-block', width: 'fit-content',
+                }}>{deptName}</span>
+                <button
+                  onClick={() => handleDeleteMember(member)}
+                  style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #FECACA', background: '#FFF5F5', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Trash2 size={13} color="#DC2626" />
+                </button>
+              </div>
+            )
+          })}
+
+          {addingMember && (
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr 40px',
+              alignItems: 'center', padding: '10px 16px',
+              borderTop: '1px solid #EEF0FF', background: '#FAFBFF', gap: 8,
+            }}>
+              <StyledInput
+                value={newMemberName}
+                onChange={e => setNewMemberName(e.target.value)}
+                placeholder="이름"
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Escape') setAddingMember(false) }}
+              />
+              <select
+                value={newMemberDeptId}
+                onChange={e => setNewMemberDeptId(e.target.value)}
+                style={{
+                  height: 36, padding: '0 10px', border: '1px solid #EBEBEB',
+                  borderRadius: 8, fontSize: 13, color: '#111827', outline: 'none',
+                  background: '#FAFAFA', width: '100%', boxSizing: 'border-box',
+                }}
+              >
+                <option value="">부서 선택 (선택사항)</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button onClick={handleAddMember} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: '#5E6AD2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Check size={13} color="#fff" />
+                </button>
+                <button onClick={() => { setAddingMember(false); setNewMemberName(''); setNewMemberDeptId('') }} style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #EBEBEB', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={13} color="#6B7280" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!addingMember && (
+          <button
+            onClick={() => setAddingMember(true)}
+            style={{
+              marginTop: 10, width: '100%', height: 34,
+              border: '1px dashed #D1D5DB', borderRadius: 8,
+              background: 'transparent', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              fontSize: 13, color: '#6B7280', fontWeight: 500,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#059669'; e.currentTarget.style.color = '#059669' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#6B7280' }}
+          >
+            <Plus size={14} />
+            새 멤버 추가
           </button>
         )}
       </Card>

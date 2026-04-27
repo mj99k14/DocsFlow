@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { ArrowLeft, CheckCircle, XCircle, PauseCircle, Download, Building2, Calendar, TrendingUp, Sparkles, Clock, RefreshCw, Trash2 } from 'lucide-react'
-import { getDocument, getDocumentHistory, getDepartments, downloadFile, retryDocument, deleteDocument, approveDocumentDept, holdDocument } from '../services/api.js'
+import { getDocument, getDocumentHistory, getDepartments, downloadFile, retryDocument, deleteDocument, approveDocumentDept, holdDocument, getMembers } from '../services/api.js'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -39,6 +39,7 @@ export default function DocumentDetail() {
   const [approverName, setApproverName] = useState('')
   const [approving, setApproving] = useState(false)
   const [confirmRejectDeptId, setConfirmRejectDeptId] = useState(null)
+  const [members, setMembers] = useState([])
   const pollingRef = useRef(null)
 
   const isMobile = useIsMobile()
@@ -63,6 +64,10 @@ export default function DocumentDetail() {
     pollingRef.current = setInterval(load, 5000)
     return () => clearInterval(pollingRef.current)
   }, [id])
+
+  useEffect(() => {
+    getMembers().then(setMembers).catch(console.error)
+  }, [])
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -514,17 +519,21 @@ export default function DocumentDetail() {
                 {/* 담당자 이름 입력 + 보류 */}
                 {(doc.status === 'COMPLETED' || doc.status === 'HELD') && doc.analysis?.departments?.some(d => !d.approval_status) && (
                   <>
-                    <input
-                      type="text"
-                      placeholder="담당자 이름 입력 (필수)"
+                    <select
                       value={approverName}
                       onChange={e => setApproverName(e.target.value)}
                       style={{
                         width: '100%', boxSizing: 'border-box', height: 36,
                         padding: '0 12px', border: '1px solid #E5E7EB',
                         borderRadius: 8, fontSize: 13, outline: 'none', marginBottom: 8,
+                        background: '#fff', color: approverName ? '#111827' : '#9CA3AF',
                       }}
-                    />
+                    >
+                      <option value="">담당자 선택 (필수)</option>
+                      {members.map(m => (
+                        <option key={m.id} value={m.name}>{m.name}{m.department_id && deptMap[m.department_id] ? ` (${deptMap[m.department_id]})` : ''}</option>
+                      ))}
+                    </select>
                     {doc.status === 'COMPLETED' && (
                       <button
                         onClick={handleHold}

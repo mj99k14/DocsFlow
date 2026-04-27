@@ -105,7 +105,18 @@ class ApprovalHistory(Base):
     document = relationship("Document", back_populates="approvals")
 
 
-# ── 6. system_settings (시스템 설정) ─────────────────────────
+# ── 6. members (멤버) ────────────────────────────────────────
+class Member(Base):
+    __tablename__ = "members"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    name          = Column(String(100), nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+
+    department = relationship("Department")
+
+
+# ── 7. system_settings (시스템 설정) ─────────────────────────
 class SystemSettings(Base):
     __tablename__ = "system_settings"
 

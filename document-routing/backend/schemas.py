@@ -111,6 +111,19 @@ class DocumentDetailResponse(BaseModel):
         from_attributes = True
 
 
+class MemberCreate(BaseModel):
+    name: str
+    department_id: Optional[int] = None
+
+class MemberResponse(BaseModel):
+    id: int
+    name: str
+    department_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
 class DepartmentUpdate(BaseModel):
     slack_channel: Optional[str] = None
     webhook_url  : Optional[str] = None

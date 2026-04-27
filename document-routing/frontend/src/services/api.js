@@ -70,6 +70,10 @@ export const retryDocument = (id) =>
 export const deleteDocument = (id, pin) =>
   axios.delete(`${API_URL}/documents/${id}`, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
 
+export const getMembers = () => axios.get(`${API_URL}/members/`).then(r => r.data)
+export const createMember = (data, pin) => axios.post(`${API_URL}/members/`, data, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
+export const deleteMember = (id, pin) => axios.delete(`${API_URL}/members/${id}`, { headers: { 'x-admin-pin': pin } }).then(r => r.data)
+
 export const getDocumentsCount = (search = '') =>
   axios.get(`${API_URL}/documents/count`, { params: { ...(search ? { search } : {}) } }).then(r => r.data)
 

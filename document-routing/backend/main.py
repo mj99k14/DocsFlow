@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from database import engine, sessionLocal
 import models
-from routers import documents, slack, departments, admin
+from routers import documents, slack, departments, admin, members
 from datetime import datetime, timedelta, timezone
 
 models.Base.metadata.create_all(bind=engine) #models테이블이없으면 생성 있으면 pass
@@ -59,6 +59,7 @@ app.include_router(documents.router)
 app.include_router(slack.router)
 app.include_router(departments.router)
 app.include_router(admin.router)
+app.include_router(members.router)
 
 
 @app.get("/")
