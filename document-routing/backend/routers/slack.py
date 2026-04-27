@@ -114,7 +114,7 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
             doc_dept = db.query(DocumentDepartment).filter(
                 DocumentDepartment.analysis_id == analysis.id,
                 DocumentDepartment.department_id == department_id,
-            ).first()
+            ).with_for_update().first()
             if doc_dept:
                 if doc_dept.approval_status is not None:
                     print(f" 부서 {department_id} 이미 결정됨({doc_dept.approval_status}), 스킵")

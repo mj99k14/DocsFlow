@@ -286,7 +286,7 @@ def approve_document(
         doc_dept = db.query(DocumentDepartment).filter(
             DocumentDepartment.analysis_id == analysis.id,
             DocumentDepartment.department_id == data.department_id,
-        ).first()
+        ).with_for_update().first()
         if doc_dept:
             if doc_dept.approval_status is not None:
                 raise HTTPException(status_code=400, detail="이미 처리된 부서입니다")
