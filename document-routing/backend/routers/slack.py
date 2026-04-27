@@ -217,8 +217,11 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
             "confidence":    0.0
         }
 
-        # 재분류 시 기존 부서 결정 초기화 (이전 승인/반려가 새 결정에 영향 안 주도록)
-        from models import DocumentDepartment
+        # 새 부서 조회
+        from models import DocumentDepartment, Department
+        dept = db.query(Department).filter(Department.name == new_department).first()
+
+        # 기존 부서 결정 초기화 + is_selected 해제
         all_doc_depts = db.query(DocumentDepartment).filter(
             DocumentDepartment.analysis_id == analysis.id
         ).all()
@@ -226,6 +229,24 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
             dd.approval_status = None
             dd.approved_by = None
             dd.approved_at = None
+            dd.is_selected = False
+
+        # 새 부서 DocumentDepartment 레코드 확보 (없으면 생성)
+        if dept:
+            new_doc_dept = db.query(DocumentDepartment).filter(
+                DocumentDepartment.analysis_id == analysis.id,
+                DocumentDepartment.department_id == dept.id,
+            ).first()
+            if not new_doc_dept:
+                new_doc_dept = DocumentDepartment(
+                    analysis_id=analysis.id,
+                    department_id=dept.id,
+                    confidence=0.0,
+                    is_selected=True,
+                )
+                db.add(new_doc_dept)
+            else:
+                new_doc_dept.is_selected = True
 
         # 상태 COMPLETED 유지 (AI 분석은 이미 완료됨, 부서만 변경)
         document.status = StatusType.COMPLETED
@@ -240,12 +261,11 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
         db.add(approval)
         db.commit()
 
-        # 새 부서 채널로 재전송
-        from models import Department
-        dept = db.query(Department).filter(Department.name == new_department).first()
+        # 새 부서 채널로 재전송 (dept_id 포함 → Slack 버튼에 부서 ID 반영)
         channel = dept.slack_channel if dept else None
         webhook_url = dept.webhook_url if dept else None
-        send_slack_notification(document_id, document.file_name, ai_result, channel=channel, webhook_url=webhook_url)
+        dept_id = dept.id if dept else None
+        send_slack_notification(document_id, document.file_name, ai_result, channel=channel, webhook_url=webhook_url, dept_id=dept_id)
 
         print(f"문서 {document_id} 재분류 완료 → {new_department}")
 

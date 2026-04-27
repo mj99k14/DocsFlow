@@ -50,6 +50,9 @@ export default function DocumentDetail() {
         const map = {}
         depts.forEach(dept => { map[dept.id] = dept.name })
         setDeptMap(map)
+        if (['APPROVED', 'REJECTED', 'FAILED'].includes(d.status)) {
+          clearInterval(pollingRef.current)
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false))

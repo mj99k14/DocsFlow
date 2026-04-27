@@ -1,4 +1,5 @@
 import os
+import uuid
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session, selectinload
 from database import get_db
@@ -110,7 +111,8 @@ async def upload_document(
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="파일 크기는 10MB를 초과할 수 없습니다")
 
-    file_path = f"{UPLOAD_DIR}/{file.filename}"
+    ext = os.path.splitext(file.filename)[1]
+    file_path = f"{UPLOAD_DIR}/{uuid.uuid4().hex}{ext}"
     with open(file_path, "wb") as f:
         f.write(content)
 
