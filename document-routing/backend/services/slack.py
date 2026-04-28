@@ -1,8 +1,11 @@
 import os
+import logging
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 # 관리자 채널 Webhook URL
 WEBHOOK_ADMIN = os.getenv("SLACK_WEBHOOK_REJECT")
@@ -134,7 +137,7 @@ def send_slack_notification(document_id: int, file_name: str, ai_result: dict, c
     else:
         raise Exception("Slack 채널 또는 Webhook URL이 필요합니다")
 
-    print(f" Slack 알림 전송 완료 → {department} ({file_name})")
+    logger.info("Slack 알림 전송 완료 → %s (%s)", department, file_name)
     return True
 
 
@@ -158,7 +161,7 @@ def _build_reroute_select(document_id: int, departments: list[str]) -> dict:
 def send_rejected_notification(document_id: int, file_name: str, rejected_by: str, original_department: str, analysis=None, departments: list[str] = None):
     """반려 시 관리자 채널로 재분류 요청 알림 전송"""
     if not WEBHOOK_ADMIN:
-        print(" 관리자 Webhook URL이 설정되지 않았습니다")
+        logger.warning("관리자 Webhook URL이 설정되지 않았습니다")
         return False
 
     summary      = analysis.summary       if analysis else "요약 없음"
@@ -212,7 +215,7 @@ def send_rejected_notification(document_id: int, file_name: str, rejected_by: st
     if response.status_code != 200:
         raise Exception(f"관리자 알림 전송 실패: {response.status_code} {response.text}")
 
-    print(f" 관리자 채널 재분류 요청 전송 완료 ({file_name})")
+    logger.info("관리자 채널 재분류 요청 전송 완료 (%s)", file_name)
     return True
 
 
@@ -242,7 +245,7 @@ def update_slack_message(response_url: str, action_type: str, user_name: str):
 
     response = requests.post(response_url, json=message)
     if response.status_code != 200:
-        print(f" Slack 메시지 업데이트 실패: {response.status_code} {response.text}")
+        logger.error("Slack 메시지 업데이트 실패: %s %s", response.status_code, response.text)
 
 
 def send_approved_notification(document_id: int, file_name: str, dept_name: str, approved_by: str, channel: str = None, webhook_url: str = None):
@@ -280,13 +283,13 @@ def send_approved_notification(document_id: int, file_name: str, dept_name: str,
         response = requests.post(webhook_url, json=message)
         if response.status_code != 200:
             raise Exception(f"Slack 전송 실패: {response.status_code} {response.text}")
-    print(f" 승인 알림 전송 완료 → {dept_name} ({file_name})")
+    logger.info("승인 알림 전송 완료 → %s (%s)", dept_name, file_name)
 
 
 def send_human_rejected_notification(document_id: int, file_name: str, rejected_by: str, dept_name: str):
     """웹에서 반려 시 관리자 채널로 알림 전송"""
     if not WEBHOOK_ADMIN:
-        print(" 관리자 Webhook URL이 설정되지 않았습니다")
+        logger.warning("관리자 Webhook URL이 설정되지 않았습니다")
         return False
 
     message = {
@@ -315,17 +318,17 @@ def send_human_rejected_notification(document_id: int, file_name: str, rejected_
 
     response = requests.post(WEBHOOK_ADMIN, json=message)
     if response.status_code != 200:
-        print(f" 반려 알림 전송 실패: {response.status_code} {response.text}")
+        logger.error("반려 알림 전송 실패: %s %s", response.status_code, response.text)
         return False
 
-    print(f" 반려 알림 전송 완료 ({file_name})")
+    logger.info("반려 알림 전송 완료 (%s)", file_name)
     return True
 
 
 def send_held_notification(document_id: int, file_name: str, held_by: str, analysis=None, departments: list[str] = None):
     """보류 시 관리자 채널로 알림 전송"""
     if not WEBHOOK_ADMIN:
-        print(" 관리자 Webhook URL이 설정되지 않았습니다")
+        logger.warning("관리자 Webhook URL이 설정되지 않았습니다")
         return False
 
     summary  = analysis.summary       if analysis else "요약 없음"
@@ -377,8 +380,8 @@ def send_held_notification(document_id: int, file_name: str, held_by: str, analy
 
     response = requests.post(WEBHOOK_ADMIN, json=message)
     if response.status_code != 200:
-        print(f" 보류 알림 전송 실패: {response.status_code} {response.text}")
+        logger.error("보류 알림 전송 실패: %s %s", response.status_code, response.text)
         return False
 
-    print(f" 보류 알림 전송 완료 ({file_name})")
+    logger.info("보류 알림 전송 완료 (%s)", file_name)
     return True

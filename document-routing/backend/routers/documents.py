@@ -1,6 +1,9 @@
 import os
 import uuid
+import logging
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks, Query
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session, selectinload
 from database import get_db
 from models import Document, AnalysisResult, DocumentDepartment, Department, StatusType, ApprovalHistory, SystemSettings
@@ -77,15 +80,15 @@ def process_document(document_id: int, file_path: str):
         try:
             if threshold > 0.0 and confidence < threshold:
                 from services.slack import send_rejected_notification
-                print(f" 신뢰도 {int(confidence*100)}% < 임계값 {int(threshold*100)}% → 관리자 채널로 전송")
+                logger.info("신뢰도 %d%% < 임계값 %d%% → 관리자 채널로 전송", int(confidence*100), int(threshold*100))
                 send_rejected_notification(document_id, document.file_name, "AI 자동 분류 (저신뢰도)", dept_names_str, analysis=analysis, departments=department_names)
             else:
                 for dept in matched_departments:
                     send_slack_notification(document_id, document.file_name, ai_result, channel=dept.slack_channel, webhook_url=dept.webhook_url, dept_id=dept.id)
         except Exception as slack_error:
-            print(f" Slack 알림 실패 (분석은 완료됨): {str(slack_error)}")
+            logger.warning("Slack 알림 실패 (분석은 완료됨): %s", slack_error)
 
-        print(f" 문서 {document_id} 분석 완료: {dept_names_str} ({confidence})")
+        logger.info("문서 %d 분석 완료: %s (신뢰도 %.2f)", document_id, dept_names_str, confidence)
 
     except Exception as e:
         document = db.query(Document).filter(Document.id == document_id).first()
@@ -93,7 +96,7 @@ def process_document(document_id: int, file_path: str):
             document.status = StatusType.FAILED
             document.error_message = str(e)
             db.commit()
-        print(f" 문서 {document_id} 분석 실패: {str(e)}")
+        logger.error("문서 %d 분석 실패: %s", document_id, e)
     finally:
         db.close()
 
@@ -342,6 +345,6 @@ def approve_document(
         elif data.action == "HELD":
             send_held_notification(document_id, document.file_name, data.approved_by, analysis)
     except Exception as e:
-        print(f" Slack 알림 전송 실패: {str(e)}")
+        logger.error("Slack 알림 전송 실패: %s", e)
 
     return approval

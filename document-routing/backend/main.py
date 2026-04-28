@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -7,6 +8,13 @@ from database import engine, sessionLocal
 import models
 from routers import documents, slack, departments, admin, members
 from datetime import datetime, timedelta, timezone
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 models.Base.metadata.create_all(bind=engine) #models테이블이없으면 생성 있으면 pass
 
@@ -30,9 +38,9 @@ def cleanup_old_documents():
 
         db.commit()
         if old_docs:
-            print(f" 자동 삭제: {len(old_docs)}개 문서 정리 완료")
+            logger.info("자동 삭제: %d개 문서 정리 완료", len(old_docs))
     except Exception as e:
-        print(f" 자동 삭제 실패: {e}")
+        logger.error("자동 삭제 실패: %s", e)
     finally:
         db.close()
 

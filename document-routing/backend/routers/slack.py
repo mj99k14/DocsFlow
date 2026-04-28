@@ -1,5 +1,8 @@
 import json
+import logging
 from fastapi import APIRouter, Request, BackgroundTasks
+
+logger = logging.getLogger(__name__)
 from fastapi.responses import JSONResponse
 from database import sessionLocal
 from models import Document, AnalysisResult, ApprovalHistory, StatusType, ActionType
@@ -45,7 +48,7 @@ async def slack_callback(
     value        = action.get("value")
     user_name    = payload.get("user", {}).get("name", "unknown")
     response_url = payload.get("response_url", "")
-    print(f" response_url: {response_url!r}")
+    logger.debug("response_url: %r", response_url)
 
     # 재분류 드롭다운 처리 (reroute_select)
     if action_id == "reroute_select":
@@ -99,7 +102,7 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
     try:
         document = db.query(Document).filter(Document.id == document_id).first()
         if not document:
-            print(f" 문서 {document_id} 없음")
+            logger.warning("문서 %d 없음", document_id)
             return
 
         analysis = db.query(AnalysisResult).filter(
@@ -117,7 +120,7 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
             ).with_for_update().first()
             if doc_dept:
                 if doc_dept.approval_status is not None:
-                    print(f" 부서 {department_id} 이미 결정됨({doc_dept.approval_status}), 스킵")
+                    logger.info("부서 %d 이미 결정됨(%s), 스킵", department_id, doc_dept.approval_status)
                     return
                 # 보류 상태에서 재처리 시 COMPLETED로 복원 후 진행
                 if document.status == StatusType.HELD:
@@ -158,7 +161,7 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
         db.add(approval)
         db.commit()
 
-        print(f" 문서 {document_id} → {action_type.value} ({user_name})")
+        logger.info("문서 %d → %s (%s)", document_id, action_type.value, user_name)
 
         if response_url:
             update_slack_message(response_url, action_type.value, user_name)
@@ -189,7 +192,7 @@ def process_approval(document_id: int, action_type: ActionType, user_name: str, 
             )
 
     except Exception as e:
-        print(f" 승인 처리 실패: {str(e)}")
+        logger.error("승인 처리 실패: %s", e, exc_info=True)
     finally:
         db.close()
 
@@ -270,14 +273,14 @@ def process_reroute(document_id: int, new_department: str, user_name: str, respo
         dept_id = dept.id if dept else None
         send_slack_notification(document_id, document.file_name, ai_result, channel=channel, webhook_url=webhook_url, dept_id=dept_id)
 
-        print(f"문서 {document_id} 재분류 완료 → {new_department}")
+        logger.info("문서 %d 재분류 완료 → %s", document_id, new_department)
 
         # Slack 메시지 업데이트 (버튼 제거 + 결과 표시)
         if response_url:
             update_slack_message(response_url, "APPROVED", f"{user_name}(재분류→{new_department})")
 
     except Exception as e:
-        print(f" 재분류 처리 실패: {str(e)}")
+        logger.error("재분류 처리 실패: %s", e, exc_info=True)
     finally:
         db.close()
 
