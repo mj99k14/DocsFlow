@@ -43,7 +43,7 @@ export default function DocumentDetail() {
 
   const isMobile = useIsMobile()
 
-  const load = () => {
+  const load = (isInitial = false) => {
     Promise.all([getDocument(id), getDocumentHistory(id), getDepartments()])
       .then(([d, h, depts]) => {
         setDoc(d); setHistory(h)
@@ -54,13 +54,15 @@ export default function DocumentDetail() {
           clearInterval(pollingRef.current)
         }
       })
-      .catch(console.error)
+      .catch(() => {
+        if (isInitial) toast.error('문서 정보를 불러오지 못했습니다')
+      })
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    load()
-    pollingRef.current = setInterval(load, 5000)
+    load(true)
+    pollingRef.current = setInterval(() => load(false), 5000)
     return () => clearInterval(pollingRef.current)
   }, [id])
 
@@ -308,6 +310,13 @@ export default function DocumentDetail() {
                     </div>
                   )}
                 </>
+              ) : doc.status === 'FAILED' ? (
+                <div style={{ padding: '16px 20px', background: '#FEF2F2', borderRadius: 10, border: '1px solid #FECACA' }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#DC2626', marginBottom: doc.error_message ? 6 : 0 }}>분석에 실패했습니다</p>
+                  {doc.error_message && (
+                    <p style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.6, wordBreak: 'break-all' }}>{doc.error_message}</p>
+                  )}
+                </div>
               ) : (
                 <div style={{ padding: '32px 0', textAlign: 'center' }}>
                   <div className="spinner" style={{ margin: '0 auto 8px' }} />

@@ -91,6 +91,7 @@ def process_document(document_id: int, file_path: str):
         document = db.query(Document).filter(Document.id == document_id).first()
         if document:
             document.status = StatusType.FAILED
+            document.error_message = str(e)
             db.commit()
         print(f" 문서 {document_id} 분석 실패: {str(e)}")
     finally:

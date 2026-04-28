@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List
 from models import StatusType, ActionType
@@ -8,21 +8,23 @@ from models import StatusType, ActionType
 
 # 문서 업로드 응답
 class DocumentResponse(BaseModel):
-    id        : int
-    file_name : str
-    status    : StatusType
-    created_at: datetime
+    id            : int
+    file_name     : str
+    status        : StatusType
+    created_at    : datetime
+    error_message : Optional[str] = None
 
     class Config:
-        from_attributes = True  # SQLAlchemy 모델 → Pydantic 변환 허용
+        from_attributes = True
 
 
 # 문서 상태 조회 응답
 class DocumentStatusResponse(BaseModel):
-    id        : int
-    file_name : str
-    status    : StatusType
-    created_at: datetime
+    id            : int
+    file_name     : str
+    status        : StatusType
+    created_at    : datetime
+    error_message : Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -81,7 +83,14 @@ class DocumentDepartmentResponse(BaseModel):
 class ApprovalRequest(BaseModel):
     action       : ActionType
     approved_by  : str
-    department_id: Optional[int] = None   # 부서별 승인 시 필요
+    department_id: Optional[int] = None
+
+    @field_validator("approved_by")
+    @classmethod
+    def approved_by_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("승인자 이름을 입력해주세요")
+        return v.strip()
 
 
 # 승인 응답
@@ -100,12 +109,13 @@ class ApprovalResponse(BaseModel):
 # ── 6. 전체 문서 상세 조회 (문서 + 분석결과 + 추천부서) ──────
 
 class DocumentDetailResponse(BaseModel):
-    id          : int
-    file_name   : str
-    status      : StatusType
-    created_at  : datetime
-    retry_count : int = 0
-    analysis    : Optional[AnalysisResultResponse] = None  # 분석 결과 (departments 포함)
+    id            : int
+    file_name     : str
+    status        : StatusType
+    created_at    : datetime
+    retry_count   : int = 0
+    error_message : Optional[str] = None
+    analysis      : Optional[AnalysisResultResponse] = None
 
     class Config:
         from_attributes = True
