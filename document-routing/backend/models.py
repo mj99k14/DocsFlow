@@ -31,7 +31,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id            = Column(Integer, primary_key=True, index=True)
-    file_name     = Column(String(255), nullable=False)
+    file_name     = Column(String(255), nullable=False, index=True)
     file_path     = Column(String(500), nullable=False)
     status        = Column(Enum(StatusType), default=StatusType.PENDING)
     created_at    = Column(DateTime, default=utcnow)
