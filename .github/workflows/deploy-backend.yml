@@ -8,7 +8,6 @@ on:
       - ".github/workflows/deploy-backend.yml"
 
 jobs:
-  # ─── 1단계: 테스트 ────────────────────────────────────────────
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -51,43 +50,3 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DATABASE_URL: postgresql://postgres:1212@localhost:5432/document_routing_test
         run: pytest -v
-
-  # ─── 2단계: EC2 배포 (SSM) ────────────────────────────────────
-  deploy:
-    name: Deploy to EC2
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: AWS 자격증명 설정
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-2
-
-      - name: SSM으로 EC2에 배포
-        run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "i-06dd782d72c1cda6b" \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "cd /home/ec2-user/DocsFlow && git pull origin main",
-              "cd /home/ec2-user/DocsFlow/document-routing/backend && pip install -r requirements.txt --quiet",
-              "systemctl restart docsflow",
-              "systemctl is-active docsflow && echo 배포완료"
-            ]' \
-            --query "Command.CommandId" \
-            --output text)
-
-          echo "Command ID: $COMMAND_ID"
-
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "i-06dd782d72c1cda6b"
-
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "i-06dd782d72c1cda6b" \
-            --query "StandardOutputContent" \
-            --output text
